@@ -1,8 +1,9 @@
 // Browser log sink that batches formatted lines and POSTs them to the Vite dev-server log endpoint (server/logPlugin.ts),
 // which appends them to logs/game_<session>.log and echoes them to the terminal in real time.
 // Global context: a browser page cannot write files itself, so this sink is how the game's logs reach disk.
-// When the page is served statically (no dev server), a 404/405 answer disables the sink and the console sink remains
-// the only output. Other failures (dev-server restart, network blips) only warn once and later batches keep flowing.
+// When the page is served statically (no dev server), a 404/405/501 answer disables the sink and the console sink
+// remains the only output (GitHub Pages answers POST with 405; Python's http.server with 501). Other failures
+// (dev-server restart, network blips) only warn once and later batches keep flowing.
 // Batches are split below 60 kB because keepalive fetch and sendBeacon bodies are limited to 64 KiB.
 // APIs: fetch keepalive (https://developer.mozilla.org/en-US/docs/Web/API/RequestInit#keepalive) and
 // navigator.sendBeacon for the final flush on page hide (https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon).
@@ -12,6 +13,9 @@ import type { LogSink } from './logger'; // Sink signature shared by all outputs
 export const LOG_ENDPOINT = '/__log';
 /** Max bytes per request body (keepalive fetch / sendBeacon allow 64 KiB in total). */
 const MAX_BATCH_BYTES = 60_000;
+/** Answers meaning "this server has no log endpoint", permanent per RFC 9110 §15.5.5, §15.5.6, §15.6.2
+ * (https://www.rfc-editor.org/rfc/rfc9110#name-status-codes): Not Found, Method Not Allowed, Not Implemented. */
+const NO_ENDPOINT_STATUSES = [404, 405, 501];
 
 /** Group lines into newline-joined bodies of at most `maxBytes` UTF-8 bytes (a longer single line is sent alone). */
 export function splitBatches(lines: readonly string[], maxBytes: number): string[] {
@@ -64,7 +68,7 @@ export function createHttpSink(sessionId: string, flushMs = 250): LogSink {
       }
       fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'text/plain' }, keepalive: true }) // Async POST.
         .then((response) => {
-          if (response.status === 404 || response.status === 405) disabled = true; // No log plugin here: stop trying.
+          if (NO_ENDPOINT_STATUSES.includes(response.status)) disabled = true; // No log plugin here: stop trying.
           else if (!response.ok) failed(`HTTP ${response.status}`); // E.g. 413: keep going with later batches.
         })
         .catch((error) => failed(String(error))); // Dev server restarting etc.
