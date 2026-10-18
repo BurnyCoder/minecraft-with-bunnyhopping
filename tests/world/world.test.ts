@@ -34,6 +34,18 @@ describe('World', () => {
     expect(world.getBlock(40, -40, 10)).toBe(BlockId.BRICKS); // Regenerated with the edit applied.
   });
 
+  it('exports and re-imports edits (negative coordinates included) into a fresh world', () => {
+    const world = new World(empty); // Blank world.
+    const edits: [number, number, number, BlockId][] = [[-1, -1, 0, BlockId.STONE], [-17, 33, 63, BlockId.SAND], [40, -40, 10, BlockId.AIR]]; // Mixed cells.
+    for (const [x, y, z, id] of edits) world.setBlock(x, y, z, id); // Apply.
+    const exported = world.exportEdits(); // Global tuples.
+    expect([...exported].sort()).toEqual([...edits].sort()); // Same set back.
+    const fresh = new World(empty); // New session.
+    fresh.importEdits(exported); // Load before generation.
+    for (const [x, y, z, id] of edits) expect(fresh.getBlock(x, y, z)).toBe(id); // Applied on generation.
+    expect(fresh.getBlock(-1, -1, 1)).toBe(BlockId.AIR); // Nothing leaks into other cells.
+  });
+
   it('notifies listeners with every chunk whose mesh an edit affects', () => {
     const world = new World(empty); // Blank world.
     const touched: string[] = []; // Chunk keys reported.
