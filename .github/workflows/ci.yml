@@ -1,0 +1,19 @@
+# Continuous integration: type-check and run the unit tests on every push to main and every pull request.
+# Actions: https://github.com/actions/checkout and https://github.com/actions/setup-node (npm cache via package-lock.json).
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7 # Fetch the repository.
+      - uses: actions/setup-node@v7 # Install Node.js with npm caching.
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci # Exact dependency versions from package-lock.json.
+      - run: npm run typecheck # tsc --noEmit.
+      - run: npm test # Vitest unit + integration tests.
