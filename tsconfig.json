@@ -14,7 +14,8 @@
     "isolatedModules": true, // Required by Vite/esbuild-style per-file transpilation.
     "verbatimModuleSyntax": true, // Force `import type` for type-only imports so transpilers can drop them safely.
     "skipLibCheck": true, // Do not type-check third-party .d.ts files (faster, avoids upstream type noise).
-    "noEmit": true // tsc is only a type checker here; Vite produces the actual JavaScript.
+    "noEmit": true, // tsc is only a type checker here; Vite produces the actual JavaScript.
+    "allowImportingTsExtensions": true // Allow explicit .ts import paths (needed by Vite's native config loader, which does not guess extensions).
   },
   "include": ["src", "tests", "server", "experiments", "vite.config.ts"] // Every TypeScript source folder in the repo.
 }
