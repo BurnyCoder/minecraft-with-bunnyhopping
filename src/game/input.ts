@@ -121,6 +121,7 @@ export function bindDomInput(canvas: HTMLCanvasElement, input: InputState, handl
       if (locked()) input.wheel(); // Wheel = jump pulse.
     }, { passive: false }],
     [document, 'keydown', (e) => {
+      if (e.target instanceof HTMLInputElement) return; // Typing in the console: not game input.
       const k = e as KeyboardEvent; // Typed event.
       if (k.code.startsWith('Digit') && k.code !== 'Digit0') handlers.onSelectSlot(Number(k.code.slice(5)) - 1); // 1-9.
       if (k.code === 'KeyR' && locked()) handlers.onRespawn(); // Respawn at the plaza.

@@ -14,6 +14,7 @@ import { hullOverlapsSolid, traceHull, tryPlayerMove, type VoxelQuery } from './
 import {
   BUNNYJUMP_MAX_SPEED_FACTOR,
   DUCK_HULL,
+  DUCK_SPEED_MULTIPLIER,
   GROUND_CHECK_DISTANCE,
   JUMP_IMPULSE,
   NON_JUMP_VELOCITY,
@@ -22,9 +23,11 @@ import {
   type Hull,
 } from './constants'; // Fixed CS:S constants.
 import type { Cvars } from './cvars'; // Tunables.
-import { IN_JUMP, type PlayerState, type UserCmd } from './player'; // State + input.
+import { IN_DUCK, IN_JUMP, type PlayerState, type UserCmd } from './player'; // State + input.
 
 const DEG2RAD = Math.PI / 180; // Degrees -> radians.
+/** Height difference between the standing and ducked hulls (62 - 45 = 17 u): how far the feet move on an air duck. */
+const DUCK_DELTA = STAND_HULL.maxs[2] - DUCK_HULL.maxs[2];
 
 /** What happened during a tick (for HUD, logs and experiments). */
 export interface TickEvents {
@@ -40,7 +43,7 @@ interface Wish {
 
 /** Collision hull currently in use (ducked or standing). */
 export function hullFor(state: PlayerState): Hull {
-  return state.ducked ? DUCK_HULL : STAND_HULL; // Duck support arrives in a later step; ducked stays false until then.
+  return state.ducked ? DUCK_HULL : STAND_HULL; // 45 u tall while ducked, 62 u standing.
 }
 
 /**
@@ -55,8 +58,11 @@ export function moveBasis(yawDeg: number): { forward: Vector3; right: Vector3 } 
   };
 }
 
-/** CheckParameters: scale (forwardmove, sidemove) down so their length is at most maxspeed [SDK L981-1030]. */
-export function checkParameters(cmd: UserCmd, cvars: Cvars): { fmove: number; smove: number } {
+/**
+ * CheckParameters: scale (forwardmove, sidemove) down so their length is at most maxspeed [SDK L981-1030], then apply the
+ * CS duck crop (x0.34 while duck is held or the player is ducked) as Momentum Mod's HandleDuckingSpeedCrop does.
+ */
+export function checkParameters(cmd: UserCmd, cvars: Cvars, ducked: boolean): { fmove: number; smove: number } {
   let fmove = cmd.forwardmove; // Requested forward speed (keyboard: +-400).
   let smove = cmd.sidemove; // Requested side speed (keyboard: +-400).
   const spd2 = fmove * fmove + smove * smove; // Squared magnitude (upmove is always 0 here).
@@ -65,6 +71,10 @@ export function checkParameters(cmd: UserCmd, cvars: Cvars): { fmove: number; sm
     const ratio = max / Math.sqrt(spd2); // Uniform scale factor.
     fmove *= ratio; // E.g. W alone: 400 -> 250.
     smove *= ratio;
+  }
+  if (cmd.buttons & IN_DUCK || ducked) {
+    fmove *= DUCK_SPEED_MULTIPLIER; // 250 -> 85 u/s.
+    smove *= DUCK_SPEED_MULTIPLIER;
   }
   return { fmove, smove };
 }
@@ -182,6 +192,27 @@ function stayOnGround(world: VoxelQuery, state: PlayerState): void {
   if (trace.axis === 2 && trace.fraction > 0 && trace.fraction < 1) state.origin.z += down.z * trace.fraction; // Snap.
 }
 
+/**
+ * Instant duck/unduck (Source animates ducking over time on the ground; this port switches immediately, see docs).
+ * Ducking in the air raises the origin by 17 u so the head stays put (FinishDuck [SDK L4215-4253]); unducking in the air
+ * lowers it again, and only happens if the standing hull fits along the way (CanUnduck/FinishUnDuck [SDK L4074-4152]).
+ */
+function duck(world: VoxelQuery, state: PlayerState, cmd: UserCmd): void {
+  const wantDuck = (cmd.buttons & IN_DUCK) !== 0; // Duck key held this tick.
+  if (wantDuck && !state.ducked) {
+    if (!state.onGround) state.origin.z += DUCK_DELTA; // Tuck the feet up in the air.
+    state.ducked = true; // Switch to the 45 u hull (always fits: it is inside the standing box).
+    categorizePosition(world, state); // "Recategorize position since ducking can change origin".
+  } else if (!wantDuck && state.ducked) {
+    const drop = state.onGround ? 0 : DUCK_DELTA; // In the air the feet come back down 17 u.
+    const swept: Hull = { mins: [STAND_HULL.mins[0], STAND_HULL.mins[1], -drop], maxs: STAND_HULL.maxs }; // Standing hull over the whole unduck sweep.
+    if (hullOverlapsSolid(world, state.origin, swept)) return; // CanUnduck failed: stay ducked.
+    state.origin.z -= drop; // Move the feet.
+    state.ducked = false; // Back to the 62 u hull.
+    categorizePosition(world, state); // Ground may have changed.
+  }
+}
+
 /** WalkMove: ground acceleration then slide-move (Source tries a direct move first; tryPlayerMove covers both) [SDK L1893-2018]. */
 function walkMove(world: VoxelQuery, state: PlayerState, wish: Wish, cvars: Cvars, dt: number): void {
   state.velocity.z = 0; // "Set pmove velocity" [SDK L1958].
@@ -207,8 +238,9 @@ function airMove(world: VoxelQuery, state: PlayerState, wish: Wish, cvars: Cvars
  */
 export function playerMove(world: VoxelQuery, state: PlayerState, cmd: UserCmd, cvars: Cvars): TickEvents {
   const dt = cvars.tick_interval; // Fixed tick length.
-  const { fmove, smove } = checkParameters(cmd, cvars); // Clamp the move vector to maxspeed.
+  const { fmove, smove } = checkParameters(cmd, cvars, state.ducked); // Clamp the move vector to maxspeed (+ duck crop).
   const events: TickEvents = { jumped: false, landed: false }; // Filled below.
+  duck(world, state, cmd); // Duck() runs before FullWalkMove in PlayerMove [SDK L4570+].
   startGravity(state, cvars, dt); // First half of gravity.
   if (cmd.buttons & IN_JUMP) events.jumped = checkJumpButton(state, cvars, dt); // Jump before friction: the bhop window.
   else state.oldButtons &= ~IN_JUMP; // Released: next press can jump [SDK L2088].

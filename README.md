@@ -73,10 +73,12 @@ Open <http://localhost:5173> and click the window to capture the mouse.
 | W A S D / arrows | Move |
 | Space | Jump (hold to auto-bhop on `css_bhop`) |
 | Mouse wheel | Jump for exactly one tick, like CS:S `bind mwheeldown +jump` |
+| Ctrl / C | Duck (34% speed; ducking in the air tucks the feet up 17 u, so crouch-jumps reach higher) |
 | Left / right mouse | Break / place block |
 | 1–9 | Select hotbar block |
 | R | Respawn on the spawn plaza |
 | F | Fullscreen (also locks Ctrl+W and similar keys where the browser supports it) |
+| ` (backquote) | Console: `sv_airaccelerate 100`, `preset css_vanilla`, `cvarlist`, `sensitivity 1.5`, `world_reset`, `help` |
 | Esc | Release the mouse |
 
 **How to bunnyhop:** run forward, jump, then in the air release W and hold A while moving the mouse smoothly left
@@ -88,7 +90,11 @@ sides each jump. The speedometer shows horizontal speed in u/s (run speed is 250
 All settings are optional `VITE_*` keys in `.env` (template: [.env.example](.env.example)): preset, seed, render
 distance, FOV, mouse sensitivity, log level, and per-cvar overrides such as `VITE_SV_AIRACCELERATE=100`. Invalid values
 fall back to defaults and are logged as warnings. URL parameters override `.env`: `?preset=`, `?seed=`,
-`?rd=` (render distance), `?log=`, and `?autoplay=<seconds>`.
+`?rd=` (render distance), `?log=`, and `?autoplay=<seconds>`. During play, the console (`) changes cvars live,
+validated against the same rules.
+
+Block edits are saved per seed in the browser's `localStorage` (key `bhopcraft:edits:<seed>`) and restored on reload;
+`world_reset` in the console clears them.
 
 ## What happens when you run it
 

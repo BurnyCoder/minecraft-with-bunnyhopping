@@ -101,7 +101,7 @@ export function startGameLoop(ctx: GameContext): void {
     ctx.highlight.set(ctx.interaction.target(player, angles.yaw, angles.pitch)?.block ?? null); // Outline target.
     const speed = horizontalSpeed(player); // Speedometer value.
     const p = player.origin; // Position (u).
-    const info = `${ctx.config.preset} ${Math.round(1 / cvars.tick_interval)} tick  aa ${cvars.sv_airaccelerate}\npos ${(p.x / UNITS_PER_BLOCK).toFixed(1)} ${(p.y / UNITS_PER_BLOCK).toFixed(1)} ${(p.z / UNITS_PER_BLOCK).toFixed(1)}  ${player.onGround ? 'ground' : 'air'}${ctx.autoplay?.active ? '\nAUTOPLAY' : ''}`; // Debug line.
+    const info = `${Math.round(1 / cvars.tick_interval)} tick  aa ${cvars.sv_airaccelerate}  autobhop ${cvars.sv_autobunnyhopping ? 'on' : 'off'}  cap ${cvars.sv_enablebunnyhopping ? 'off' : 'on'}\npos ${(p.x / UNITS_PER_BLOCK).toFixed(1)} ${(p.y / UNITS_PER_BLOCK).toFixed(1)} ${(p.z / UNITS_PER_BLOCK).toFixed(1)}  ${player.onGround ? 'ground' : 'air'}${ctx.autoplay?.active ? '\nAUTOPLAY' : ''}`; // Debug line.
     ctx.hud.frame({ speed, fps, info }, now); // HUD.
     view.render(); // Draw.
     busyMs += performance.now() - now; // CPU cost of this frame (physics + streaming + render submission).
