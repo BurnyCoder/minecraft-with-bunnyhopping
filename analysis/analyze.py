@@ -54,11 +54,10 @@ def exp01(summary: dict, tables: list[str]) -> None:
     summary["exp01"] = {"maxRelErrorAll": worst, "h1Pass": worst < 1e-9, "h1Falsified": worst > 1e-6, "deterministic": d["deterministic"]}
     log(f"exp01 H1: worst max relative error {worst:.3e} (pass < 1e-9: {worst < 1e-9})")
     tables.append("### Experiment 1 — closed-form grid (T = 10 s, start 250 u/s)\n")
-    tables.append("| tick rate | sv_airaccelerate | k/L | g (u²/s² per tick) | air ticks | final speed (u/s) | predicted (u/s) | max rel. error |")
-    tables.append("|---|---|---|---|---|---|---|---|")
+    tables.append("| tick rate | sv_airaccelerate | k/L | g at k_e = 1 / 0.25 (u²/s² per tick) | air ticks | of which k_e = 0.25 | final speed (u/s) | predicted (u/s) | max rel. error |")
+    tables.append("|---|---|---|---|---|---|---|---|---|")
     for row in grid:
-        predicted = np.sqrt(V0**2 + row["airTicks"] * row["gainPerTick"])  # Closed form at the end.
-        tables.append(f"| {row['tickRate']:.2f} | {row['airaccel']} | {row['kOverL']:.3f} | {row['gainPerTick']:.2f} | {row['airTicks']} | {row['finalSpeed']:.3f} | {predicted:.3f} | {row['maxRelError']:.1e} |")
+        tables.append(f"| {row['tickRate']:.2f} | {row['airaccel']} | {row['kOverL']:.3f} | {row['gainPerTick']:.2f} / {row['gainPerTickQuartered']:.2f} | {row['airTicks']} | {row['quarteredTicks']} | {row['finalSpeed']:.3f} | {row['predictedFinalSpeed']:.3f} | {row['maxRelError']:.1e} |")
     iv = d["interventions"]  # Interventions.
     summary["exp01"]["interventions"] = {k: {kk: vv for kk, vv in v.items() if kk != "trace"} for k, v in iv.items()}
 
@@ -70,7 +69,7 @@ def exp01(summary: dict, tables: list[str]) -> None:
         n = np.arange(len(row["trace"])) * step  # Tick index of each sample.
         t = n * row["tau"]  # Seconds.
         label = f"{row['tickRate']:.0f} tick, aa {row['airaccel']}"
-        line = ax.plot(t, np.sqrt(V0**2 + n * row["gainPerTick"]), lw=1)[0]  # Theory.
+        line = ax.plot(t, row["predictedTrace"], lw=1)[0]  # Theory: per-tick closed form (with Source's k_e).
         ax.plot(t[::5], np.array(row["trace"])[::5], "o", ms=3, color=line.get_color(), label=label)  # Measured.
     ax.set_xlabel("time in the air (s)")
     ax.set_ylabel("horizontal speed (u/s)")
@@ -81,12 +80,16 @@ def exp01(summary: dict, tables: list[str]) -> None:
     fig.savefig(FIGURES / "fig1_speed_vs_time.png", dpi=150)
     plt.close(fig)
 
-    # Figure 2: measured gain per tick vs k/L, against g(k)/L^2.
+    # Figure 2: mean gain per air tick vs k/L. Curves: closed form with k_e = 1 and k_e = 0.25 (Source's rising-slowly
+    # surface friction); markers: measured mean and the per-tick closed-form mean (mixes both, weighted by tick counts).
     fig, ax = plt.subplots(figsize=(6.4, 4.0))
     kl = np.logspace(-2.5, 2.6, 400)  # k/L range.
-    ax.plot(kl, gain(kl * L) / L**2, color="black", lw=1, label="theory g(k)/L²")
+    ax.plot(kl, gain(kl * L) / L**2, color="black", lw=1, label="g(k)/L², k_e = 1")
+    ax.plot(kl, gain(0.25 * kl * L) / L**2, color="black", lw=1, ls="--", label="g(k/4)/L², k_e = 0.25")
     measured = [((r["finalSpeed"] ** 2 - V0**2) / r["airTicks"]) / L**2 for r in grid]  # Empirical gain per tick.
-    ax.scatter([r["kOverL"] for r in grid], measured, s=18, color="tab:red", zorder=3, label="measured (16 conditions)")
+    predicted = [((r["predictedFinalSpeed"] ** 2 - V0**2) / r["airTicks"]) / L**2 for r in grid]  # Per-tick closed form.
+    ax.scatter([r["kOverL"] for r in grid], predicted, s=60, marker="x", color="black", zorder=3, label="closed form, per-tick k_e (mean)")
+    ax.scatter([r["kOverL"] for r in grid], measured, s=14, color="tab:red", zorder=4, label="measured (16 conditions)")
     ax.set_xscale("log")
     ax.set_xlabel("k / L  (k = τ·M·A, L = 30 u/s)")
     ax.set_ylabel("|v|² gain per tick / L²")
