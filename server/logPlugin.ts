@@ -4,7 +4,7 @@
 // terminal and persisted with timestamps, as the project logging rules require.
 // Plugin API: configureServer / configurePreviewServer hooks (https://vite.dev/guide/api-plugin.html#configureserver),
 // whose `server.middlewares` is a Connect app (https://github.com/senchalabs/connect#use-middleware).
-import { appendFileSync, mkdirSync } from 'node:fs'; // Sync appends keep line order (low volume: ~4 batches/s).
+import { appendFileSync, existsSync, mkdirSync, statSync } from 'node:fs'; // Sync appends keep line order (low volume: ~4 batches/s).
 import { join, resolve } from 'node:path'; // Path helpers for the logs folder.
 import type { IncomingMessage, ServerResponse } from 'node:http'; // Types of the Connect middleware arguments.
 import type { Plugin } from 'vite'; // Vite plugin type.
@@ -15,6 +15,27 @@ export const LOG_ENDPOINT = '/__log';
 const SESSION_PATTERN = /^\d{8}_\d{6}_[a-z0-9]{4}$/;
 /** Maximum accepted request body (1 MiB) so a buggy client cannot fill the disk in one request. */
 const MAX_BODY_BYTES = 1024 * 1024;
+/** Maximum size of one session's log file (50 MiB); further batches get 413. */
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+/**
+ * True for requests from the game's own origin, or with no Origin header (sendBeacon, curl). Browsers attach Origin to
+ * cross-site POSTs, and Vite's CORS handling does not block "simple" text/plain POSTs, so this check stops other
+ * websites from writing into (and forging lines in) the logs that `npm run e2e` uses as its oracle.
+ */
+export function isAllowedOrigin(origin: string | undefined, host: string | undefined): boolean {
+  if (origin === undefined) return true; // Same-origin beacons/fetches may omit it; non-browser clients too.
+  try {
+    return new URL(origin).host === host; // Must match the Host the server was addressed with.
+  } catch {
+    return false; // "null" or malformed origins.
+  }
+}
+
+/** Replace C0/C1 control characters (ESC, BEL, ...) except tab with "?" so log lines cannot drive the terminal. */
+export function sanitizeLine(line: string): string {
+  return line.replace(/[\u0000-\u0008\u000a-\u001f\u007f-\u009f]/g, '?'); // Keeps the tab character (0x09).
+}
 
 /** True when `value` is a well-formed session id. */
 export function isValidSessionId(value: string | null): value is string {
@@ -50,13 +71,18 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
-/** Build the Connect middleware that handles POST /__log?session=<id>. */
-function createMiddleware(logsDir: string) {
+/** Build the Connect middleware that handles POST /__log?session=<id> (exported for tests). */
+export function createMiddleware(logsDir: string) {
   return (req: IncomingMessage, res: ServerResponse, next: () => void): void => {
     const url = new URL(req.url ?? '', 'http://localhost'); // Base is irrelevant; we only need path + query.
     if (url.pathname !== LOG_ENDPOINT) return next(); // Not ours: let Vite handle it.
     if (req.method !== 'POST') {
       res.statusCode = 405; // Method Not Allowed.
+      res.end();
+      return;
+    }
+    if (!isAllowedOrigin(req.headers.origin, req.headers.host)) {
+      res.statusCode = 403; // Forbidden: another website is posting.
       res.end();
       return;
     }
@@ -68,9 +94,15 @@ function createMiddleware(logsDir: string) {
     }
     readBody(req)
       .then((body) => {
-        const lines = splitLines(body); // Individual formatted log lines.
+        const lines = splitLines(body).map(sanitizeLine); // Individual lines, control characters neutralised.
+        const file = logFileFor(logsDir, session); // This session's file.
+        if (existsSync(file) && statSync(file).size + body.length > MAX_FILE_BYTES) {
+          res.statusCode = 413; // Session file is full.
+          res.end();
+          return;
+        }
         if (lines.length > 0) {
-          appendFileSync(logFileFor(logsDir, session), `${lines.join('\n')}\n`, 'utf8'); // Persist, untruncated.
+          appendFileSync(file, `${lines.join('\n')}\n`, 'utf8'); // Persist, untruncated.
           for (const line of lines) process.stdout.write(`[browser ${session}] ${line}\n`); // Live terminal echo.
         }
         res.statusCode = 204; // No Content: success without a body.

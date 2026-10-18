@@ -38,3 +38,12 @@ describe('createLogger', () => {
     expect(lines[0].endsWith(long)).toBe(true); // Whole message survives intact.
   });
 });
+
+describe('parseLogLevel', () => {
+  it('accepts only the four level names, not inherited object keys', async () => {
+    const { parseLogLevel } = await import('../../src/logging/logger'); // Unit under test.
+    expect(parseLogLevel('debug', 'info')).toBe('debug'); // Known level.
+    expect(parseLogLevel('toString', 'info')).toBe('info'); // Prototype key rejected.
+    expect(parseLogLevel(undefined, 'warn')).toBe('warn'); // Missing -> fallback.
+  });
+});
