@@ -40,8 +40,8 @@ export interface GameContext {
   teleported: boolean; // Reset interpolation on the next frame.
 }
 
-/** Max physics ticks per frame (beyond that the simulation slows down instead of freezing the tab). */
-const MAX_TICKS_PER_FRAME = 8;
+/** Most simulated time per frame (0.1 s); a longer stall drops the backlog instead of freezing the tab. */
+const MAX_SIM_SECONDS_PER_FRAME = 0.1;
 /** Chunk mesh build budget per frame, milliseconds. */
 const CHUNK_BUDGET_MS = 4;
 
@@ -54,7 +54,7 @@ function clampEyeBelowCeiling(world: World, eye: Vector3): void {
 /** Start the animation loop. */
 export function startGameLoop(ctx: GameContext): void {
   const { world, player, cvars, view, log } = ctx; // Short names.
-  const stepper = new FixedStepper(cvars.tick_interval, MAX_TICKS_PER_FRAME); // Tick scheduler.
+  const stepper = new FixedStepper(cvars.tick_interval, MAX_SIM_SECONDS_PER_FRAME); // Tick scheduler.
   const prevEye = eyePosition(player); // Eye at the previous tick.
   const curEye = prevEye.clone(); // Eye at the latest tick.
   const eye = new Vector3(); // Interpolated eye (scratch).
@@ -66,9 +66,22 @@ export function startGameLoop(ctx: GameContext): void {
   let fps = 0; // Last measured frame rate.
   let busyMs = 0; // CPU time spent inside frames since the last summary (independent of browser throttling).
   let summaryAt = last + 1000; // Next 1 Hz log.
+  let frameErrors = 0; // Frames that threw since startup (first one is logged with its stack).
   log.info('game loop started', { tickRate: Math.round(1 / cvars.tick_interval), preset: ctx.config.preset }); // Lifecycle.
 
+  // three.js schedules the next frame before running this callback, so an exception would repeat every frame without
+  // ever reaching the log file. Catch it, log the first one in full, and count the rest in the status line.
   view.renderer.setAnimationLoop(() => {
+    try {
+      frame();
+    } catch (error) {
+      frameErrors++; // Count every failure.
+      if (frameErrors === 1) log.error('frame failed', { error: String(error), stack: (error as Error).stack }); // Full detail once.
+    }
+  });
+
+  /** One animation frame: ticks, camera, streaming, HUD, render, 1 Hz summary. */
+  function frame(): void {
     const now = performance.now(); // Frame timestamp.
     stepper.tickInterval = cvars.tick_interval; // Follow live cvar changes (console).
     const n = stepper.advance((now - last) / 1000); // Ticks to run.
@@ -108,12 +121,12 @@ export function startGameLoop(ctx: GameContext): void {
     frames++;
     if (now >= summaryAt) {
       fps = (frames * 1000) / (now - summaryAt + 1000); // Frames over the last ~second.
-      log.info('status', { fps: Math.round(fps), frameCpuMs: Number((busyMs / Math.max(frames, 1)).toFixed(2)), ticks, jumps, speed: Math.round(speed), pos: [p.x, p.y, p.z].map((v) => Math.round(v)), onGround: player.onGround, buttons: lastCmd?.buttons ?? 0, ...ctx.chunks.stats() }); // 1 Hz summary.
+      log.info('status', { fps: Math.round(fps), frameCpuMs: Number((busyMs / Math.max(frames, 1)).toFixed(2)), ticks, jumps, speed: Math.round(speed), pos: [p.x, p.y, p.z].map((v) => Math.round(v)), onGround: player.onGround, buttons: lastCmd?.buttons ?? 0, frameErrors, ...ctx.chunks.stats() }); // 1 Hz summary.
       frames = 0; // Reset counters.
       busyMs = 0;
       ticks = 0;
       jumps = 0;
       summaryAt = now + 1000;
     }
-  });
+  }
 }
