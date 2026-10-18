@@ -55,46 +55,50 @@ excluded. Analyses beyond those listed are labelled post-hoc.
 
 ---
 
-## Results (run 2026-10-18 16:47–16:49 UTC, after the pre-registration commit `3a69dc7`)
+## Results (run 2, 2026-10-18 17:25 UTC; pre-registration commit `3a69dc7`; see the revision history below)
 
 Data: `reports/data/exp02_pilot.json`, `exp02_power.json`, `exp02_confirm.json`. Statistics and figure:
 `analysis/analyze.py` → `reports/data/results_summary.json` and `reports/figures/fig5_jump_timing.png`.
 
 ### Power analysis
-- Pilot SDs of the per-run mean retention: 0.0345 (q = 0.1), 0.0182 (0.25), 0.0118 (0.5), 0.0185 (0.75), with
+- Pilot SDs of the per-run mean retention: 0.0347 (q = 0.1), 0.0182 (0.25), 0.0118 (0.5), 0.0185 (0.75), with
   t₀.₉₉₃₇₅,₉ = 3.111.
 - The pre-registered formula asks for more than 200 runs for every q, so n was clamped to **200 per q** (seeds 0–199).
-- With n = 200, the corrected half-widths are 0.0058, 0.0031, 0.0021 and 0.0034. The 0.002 precision target was **not
-  reached** at the cap; this is reported, not hidden.
+- The corrected half-widths are 0.0058, 0.0031, 0.0021 and 0.0034. The 0.002 precision target was **not reached** at
+  the cap.
 
 ### H2: anti-pogo + friction model — **not falsified**
 
 | q | runs | landings/run | predicted E[r^K] | measured mean | 95% CI | 98.75% CI (Bonferroni) | contains prediction | final speed (u/s), mean [95% CI] |
 |---|---|---|---|---|---|---|---|---|
-| 0.1 | 200 | 68.0 | 0.6451 | 0.6404 | [0.6358, 0.6449] | [0.6346, 0.6461] | yes | 220.5 [208.3, 232.8] |
-| 0.25 | 200 | 75.6 | 0.8308 | 0.8306 | [0.8282, 0.8330] | [0.8275, 0.8337] | yes | 348.2 [337.8, 358.6] |
-| 0.5 | 200 | 77.6 | 0.8900 | 0.8915 | [0.8899, 0.8931] | [0.8894, 0.8936] | yes | 432.7 [422.1, 443.3] |
-| 0.75 | 200 | 75.7 | 0.8308 | 0.8308 | [0.8281, 0.8335] | [0.8274, 0.8342] | yes | 354.4 [343.8, 364.9] |
+| 0.1 | 200 | 68.0 | 0.6451 | 0.6398 | [0.6352, 0.6443] | [0.6340, 0.6456] | yes | 206.2 [194.8, 217.6] |
+| 0.25 | 200 | 75.6 | 0.8308 | 0.8306 | [0.8282, 0.8330] | [0.8275, 0.8337] | yes | 326.2 [316.4, 336.1] |
+| 0.5 | 200 | 77.6 | 0.8900 | 0.8915 | [0.8899, 0.8931] | [0.8894, 0.8936] | yes | 406.0 [396.0, 415.9] |
+| 0.75 | 200 | 75.7 | 0.8308 | 0.8308 | [0.8281, 0.8335] | [0.8274, 0.8342] | yes | 332.0 [322.1, 341.9] |
 
-Auto-bhop baseline with the same cvars (perfect timing): 1894.6 u/s after 60 s.
+Auto-bhop baseline with the same cvars (perfect timing): 1782.2 u/s after 60 s.
 
 **Interpretation:**
-- All four Bonferroni-corrected intervals contain the pre-registered prediction, so the port's anti-pogo and friction
-  behave as the model says.
-- The derived predictions hold too: retention peaks at q = 0.5 and is symmetric in q ↔ 1 − q (0.8306 vs 0.8308 for
-  q = 0.25 vs 0.75).
-- Practically: even ideal random scroll-spam (q = 0.5) keeps only 89% of speed per landing at 66.67 tick. After 60 s
-  that leaves 433 u/s against 1895 u/s with auto-bhop. Under this model, jump timing, not strafing, is the main
-  limit on speed without auto-bhop.
+- All four Bonferroni-corrected intervals contain the prediction.
+- Retention peaks at q = 0.5 and is symmetric in q ↔ 1 − q (0.8306 vs 0.8308).
+- Even ideal random scroll-spam keeps only 89% of speed per landing at 66.67 tick: 406 u/s after 60 s against
+  1782 u/s with auto-bhop. Under this model, jump timing, not strafing, is the main limit on speed without auto-bhop.
 
 **Borderline point (post-hoc, untested):**
-- At q = 0.1 the *uncorrected* 95% CI [0.6358, 0.6449] narrowly excludes 0.6451, and the mean sits 0.0047 below the
-  prediction.
-- A candidate explanation is the model's assumption that speed stays above `sv_stopspeed` (75 u/s). At q = 0.1, long
-  waits (E[K] ≈ 1/(q(1−q)) ≈ 11 ticks) at low speeds (mean final speed 220 u/s) can push speed below 75 u/s. There,
-  Source friction removes a constant 75·μ·τ = 4.5 u/s per tick, which is more than the proportional 6%. That would lower
-  retention below r^K.
-- This explanation was formed after seeing the data and has not been tested.
+- At q = 0.1 the *uncorrected* 95% CI [0.6352, 0.6443] excludes 0.6451, and the mean is 0.0053 below the prediction.
+- Candidate cause: the model assumes speed stays above `sv_stopspeed`. At q = 0.1 speeds are low (mean final 206 u/s)
+  and waits are long (E[K] ≈ 11 ticks), so speed can fall below 75 u/s. There Source friction removes a constant
+  4.5 u/s per tick, which is more than proportional.
+- Untested.
+
+### Revision history
+- **Run 1 (16:48 UTC).** The port did not yet implement Source's 0.25 air surface-friction rule (Experiment 1, D4).
+  - Retention means: 0.6404, 0.8306, 0.8915, 0.8308. All CIs contained the predictions.
+  - Final speeds: 220.5, 348.2, 432.7, 354.4 u/s; auto-bhop 1894.6 u/s.
+  - Data kept in `*_run2_before_surface_friction.*` (the suffix refers to Experiment 1's run numbering).
+- **Run 2 (17:25 UTC).** The rule only lowers air speed gains, so it does not enter the retention model. The
+  retention means are unchanged to 4 decimals except q = 0.1 (0.6404 → 0.6398), which fits the low-speed explanation
+  above. Final speeds dropped by 6–7%.
 
 ### Limitations
 - The pulse model (i.i.d. Bernoulli per tick) is a simplification of real scroll wheels, which emit bursts of notches.

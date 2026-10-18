@@ -54,87 +54,102 @@ final speed after 10 s. No hypothesis is pre-specified.
 
 ---
 
-## Results (run 2026-10-18 16:45–16:47 UTC, after the pre-registration commit `3a69dc7`)
+## Results (run 3, 2026-10-18 17:25 UTC; pre-registration commit `3a69dc7`; see the revision history below)
 
 Data: `reports/data/exp01_results.json`. Statistics and figures: `analysis/analyze.py` → `reports/data/results_summary.json`
 and `reports/figures/fig1–fig4`. Logs: `logs/experiments_*.log`, `logs/analysis_*.log`.
 
 ### H1: closed-form agreement — **supported**
-- The worst relative error in |v|² over all 16 conditions and all ticks is **9.4 × 10⁻¹⁵**. That is 5 orders of
-  magnitude below the 1e-9 pass threshold and close to float64 rounding (2.2 × 10⁻¹⁶ per operation, accumulated over
-  up to 1280 ticks).
-- No condition had a ground (friction) tick: auto-bhop re-jumped on every landing.
-- A repeat run of the 100 tick / A = 1000 condition gave a bit-identical final speed (981.0708435174295 u/s): the
-  simulation is deterministic.
+- **Oracle used.** The closed form is applied tick by tick with that tick's Source surface-friction factor k_e. Source
+  sets `m_surfaceFriction` = 0.25 after a tick spent airborne and rising at 0 < vz ≤ 140 u/s, and AirAccelerate
+  multiplies by it. This is the k_e in jwchong's k = k_e·τ·M·A. See deviation D4 for why the oracle has this form.
+- **Result.** The worst relative error in |v|² over all 16 conditions and all ticks is **1.0 × 10⁻¹⁴**, 5 orders of
+  magnitude below the 1e-9 threshold.
+- **Other checks.** No condition had a ground (friction) tick. A repeat run of 100 tick / A = 1000 was bit-identical
+  (final speed 981.0708435174295 u/s).
 
-| tick rate | sv_airaccelerate | k/L | g (u²/s² per tick) | air ticks | final speed (u/s) | predicted (u/s) | max rel. error |
-|---|---|---|---|---|---|---|---|
-| 33.33 | 1 | 0.250 | 393.75 | 333 | 440.021 | 440.021 | 3.7e-15 |
-| 33.33 | 10 / 100 / 1000 | 2.5 / 25 / 250 | 900.00 | 333 | 601.831 | 601.831 | 1.7e-15 |
-| 66.67 | 1 | 0.125 | 210.94 | 667 | 450.772 | 450.772 | 4.4e-15 |
-| 66.67 | 10 / 100 / 1000 | 1.25 / 12.5 / 125 | 900.00 | 667 | 814.125 | 814.125 | 2.1e-15 |
-| 100 | 1 | 0.083 | 143.75 | 1000 | 454.148 | 454.148 | 7.7e-15 |
-| 100 | 10 | 0.833 | 875.00 | 1000 | 968.246 | 968.246 | 5.5e-15 |
-| 100 | 100 / 1000 | 8.33 / 83.3 | 900.00 | 1000 | 981.071 | 981.071 | 2.1e-15 |
-| 128 | 1 | 0.065 | 113.37 | 1280 | 455.650 | 455.650 | 9.4e-15 |
-| 128 | 10 | 0.651 | 790.41 | 1280 | 1036.445 | 1036.445 | 4.9e-15 |
-| 128 | 100 / 1000 | 6.51 / 65.1 | 900.00 | 1280 | 1102.044 | 1102.044 | 2.1e-15 |
+| tick rate | sv_airaccelerate | k/L | g at k_e = 1 / 0.25 (u²/s² per tick) | air ticks | of which k_e = 0.25 | final speed (u/s) | predicted (u/s) | max rel. error |
+|---|---|---|---|---|---|---|---|---|
+| 33.33 | 1 | 0.250 | 393.75 / 108.98 | 333 | 84 | 411.945 | 411.945 | 3.0e-15 |
+| 33.33 | 10 | 2.500 | 900.00 / 773.44 | 333 | 84 | 592.932 | 592.932 | 1.6e-15 |
+| 33.33 | 100 / 1000 | 25 / 250 | 900.00 / 900.00 | 333 | 84 | 601.831 | 601.831 | 1.7e-15 |
+| 66.67 | 1 | 0.125 | 210.94 / 55.37 | 667 | 166 | 421.155 | 421.155 | 6.6e-15 |
+| 66.67 | 10 | 1.250 | 900.00 / 474.61 | 667 | 166 | 769.536 | 769.536 | 2.8e-15 |
+| 66.67 | 100 / 1000 | 12.5 / 125 | 900.00 / 900.00 | 667 | 166 | 814.125 | 814.125 | 2.1e-15 |
+| 100 | 1 | 0.083 | 143.75 / 37.11 | 1000 | 232 | 426.039 | 426.039 | 1.0e-14 |
+| 100 | 10 | 0.833 | 875.00 / 335.94 | 1000 | 232 | 901.353 | 901.353 | 6.3e-15 |
+| 100 | 100 / 1000 | 8.33 / 83.3 | 900.00 / 900.00 | 1000 | 232 | 981.071 | 981.071 | 2.1e-15 |
+| 128 | 1 | 0.065 | 113.37 / 29.06 | 1280 | 310 | 426.004 | 426.004 | 1.0e-14 |
+| 128 | 10 | 0.651 | 790.41 / 269.13 | 1280 | 310 | 955.313 | 955.313 | 4.7e-15 |
+| 128 | 100 / 1000 | 6.51 / 65.1 | 900.00 / 900.00 | 1280 | 310 | 1102.044 | 1102.044 | 2.1e-15 |
 
 Rows with identical outcomes are merged (full table: `reports/data/tables.md`).
 
 **What this means:**
-- Once k ≥ L, air acceleration no longer matters. A = 10, 100 and 1000 give identical speeds at 33–67 tick, because
-  the 30 u/s projected cap, not A, limits each tick.
-- The tick rate then sets the gain per second (900·tickrate u²/s³), so under this model a higher tick rate gives
-  faster bhop: after 10 s of optimal strafing, 981 u/s at 100 tick vs 814 u/s at 66.67 tick.
-- Figure 2 shows the transition at k = L.
+- About 23–25% of air ticks (the slow part of each rise) run at k_e = 0.25.
+- When even the quartered k is at least 30 (A ≥ 100 here), A no longer matters, and speed is set by the tick rate:
+  981 u/s at 100 tick vs 814 u/s at 66.67 tick after 10 s of optimal strafing.
+- With vanilla `sv_airaccelerate 10`, the quartered ticks cost speed: 769.5 vs 814.1 u/s at 66.67 tick.
+- Figure 2 shows the measured mean gain per tick between the k_e = 1 and k_e = 0.25 curves, exactly where the
+  per-tick closed form puts it.
 
-### Interventions (H2)
+### Interventions (H2), 100 tick / A = 1000
+These are unaffected by D4, because k/4 = 625 > 30.
 
 | intervention | pre-registered prediction | measured | verdict |
 |---|---|---|---|
 | (1) no strafing, W only | speed stays 250 (1e-9) | max deviation from 250: **0** | supported |
-| (2) 30 u/s cap removed | each axis hits 3500 within 2 ticks | run 1: speed stayed exactly 250 | **falsified as stated** (see deviation D1) |
+| (2) 30 u/s cap removed | each axis hits 3500 within 2 ticks | run 1: speed stayed exactly 250 | **falsified as stated** (D1) |
 | (3) jump one tick late | ×0.96 per landing; final < perfect | ratio per landing in [0.96 − 3e-16, 0.96 + 2e-16] over 13 landings; final 745.8 vs 981.1 u/s | supported |
-| (4a) clamp: speed at the end of each jump tick ≤ 275 | ≤ 275 | max 276.62 u/s | **falsified as stated** (see deviation D2) |
+| (4a) clamp: end-of-jump-tick speed ≤ 275 | ≤ 275 | max 276.62 u/s | **falsified as stated** (D2) |
 | (4b) clamp: run maximum ≤ √(275² + N_max·g) | ≤ 378.319 (N_max = 75) | 378.307 | supported |
 
-Removing friction from landings (perfect vs late jump) and removing strafing (W only) are the two causal
-interventions that switch the speed gain on and off. Each matches its predicted size exactly (Figure 3, left).
+Friction-free landings (perfect vs late jump) and strafing (W only) switch the gain on and off, each by exactly the
+predicted amount (Figure 3, left).
 
 ### Deviations from the pre-registration (all disclosed)
-- **D1, an instrument error in the prediction and in the bot.** The prediction for (2) and the bot both used L = 1e9.
-  In Source's AirAccelerate, wishspd = min(wishspeed, cap), so the effective limit is L = min(cap, wishspeed) = 250 u/s
-  (jwchong's definition).
-  - With L = 1e9 the bot steered straight along its velocity (θ = 0). The projected room was then
-    250 − 250 = 0, so it gained nothing. That is the run-1 result above, kept in
-    `reports/data/exp01_results_run1_bot_cap_bug.json`.
-  - After fixing `StrafeBot` and `optimalGainPerTick` to use min(cap, wishspeed) (unit test added), the **post-hoc**
-    prediction is |v_n| = 250·√(n+1). It matched exactly: 250, 353.553, 433.013, 500, 559.017, 612.372 u/s, ….
-    The per-axis `sv_maxvelocity` clamp (3500) was first reached at tick 226 (Figure 3, right).
-  - The fix cannot affect the confirmatory grid, because there min(30, 250) = 30. The grid results and the exploratory
-    sweep were byte-identical before and after.
-- **D2, a derivation error in prediction (4a).** CS:S applies the clamp inside CheckJumpButton, before that same
-  tick's AirMove. A tick of optimal strafing then adds √(275² + 30²) − 275 ≈ 1.6 u/s, so the end-of-tick speed is about
-  276.6 u/s. That matches the measured 276.62 u/s (post-hoc explanation).
-- **D3, an arithmetic slip in the pre-registration text.** The k/L range is 0.065–250, not 0.008–250: k = 0.0078125·250·1
-  = 1.95, and k/L = 0.065. The condition grid itself was run exactly as specified.
+- **D1, an instrument error (bot and prediction for intervention 2).** Both used L = 1e9 instead of Source's effective
+  L = min(cap, wishspeed) = 250.
+  - Run 1 showed no gain; that data is kept in `exp01_results_run1_bot_cap_bug.json`.
+  - After the fix, the post-hoc prediction 250·√(n+1) matched exactly (250, 353.553, 433.013, 500, …).
+  - The per-axis clamp of 3500 binds from tick 226 (Figure 3, right).
+- **D2, a derivation error (4a).** The clamp runs inside CheckJumpButton, before that tick's AirMove adds about
+  1.6 u/s. That predicts about 276.6 u/s; 276.62 u/s was measured (post-hoc).
+- **D3, an arithmetic slip in the pre-registration text.** The lowest k/L is 0.065, not 0.008.
+- **D4, a port defect found by the code review after run 2, which changes the system under test.**
+  - Source's CategorizePosition sets `m_surfaceFriction` = 0.25 when no ground is found while rising (SDK
+    gamemovement.cpp L3800, L3872–3877). AirAccelerate, Accelerate and Friction multiply by it.
+  - Runs 1–2 left this out, and so did the run-2 oracle. The port and the oracle agreed with each other (max error
+    9.4e-15) but not with Source.
+  - The port now implements the rule (`movement.ts` `categorizePosition`, with unit tests). The bot and the oracle use
+    the per-tick k_e, as jwchong's formula allows.
+  - Conditions with A·M·τ/4 < 30 (A ≤ 10 in this grid) changed. Run-2 data is kept in `*_run2_before_surface_friction.*`.
+  - **Lesson:** an oracle derived from the same mental model as the implementation cannot catch shared omissions. Only
+    an independent read of the reference source (here, the code review) did.
 
 ### Exploratory: human-like constant turn rate (not confirmatory)
 
 | ω (°/s) | 0 | 90 | 180 | 360 | 540 | 720 | 1080 |
 |---|---|---|---|---|---|---|---|
-| A = 10 | 251.8 | 664.5 | 791.1 | 380.9 | 251.9 | 201.4 | 161.9 |
+| A = 10 | 251.8 | 623.1 | 436.1 | 255.8 | 227.7 | 148.3 | 128.6 |
 | A = 100 and A = 1000 (identical) | 251.8 | 664.6 | 896.5 | 857.1 | 632.3 | 477.7 | 318.8 |
 
 Speed after 10 s at 100 tick (u/s):
-- A constant mouse speed has a sweet spot near 180 °/s at this tick rate.
+- A constant mouse speed has a sweet spot: about 90 °/s at A = 10 and about 180 °/s at A ≥ 100.
 - Turning too fast drops below the 250 u/s run speed.
-- Higher air acceleration widens the useful range of turn rates.
-- Hypothesis for future work: the optimal ω scales with tick rate and speed. This was not tested.
+- Low air acceleration narrows the useful range further once quartered ticks are modelled.
+- Hypothesis for future work: the optimal ω scales with tick rate, speed and A. This was not tested.
+
+### Revision history
+
+| run | date (UTC) | port / instrument | key numbers |
+|---|---|---|---|
+| 1 | 16:45 | bot used L = cap (D1) | grid as run 2; no-cap intervention: no gain |
+| 2 | 16:47 | bot fixed; port without the 0.25 air surface-friction rule | max error 9.4e-15 vs an oracle sharing the omission; 66.67 tick A = 10: 814.125 u/s |
+| 3 | 17:25 | port implements the rule (D4); oracle per-tick k_e | max error 1.0e-14; 66.67 tick A = 10: 769.536 u/s; A ≥ 100 rows and all interventions unchanged |
 
 ### Limitations
-- The physics is checked against theory, not against recordings from the real CS:S binary. Agreement with theory
-  implies agreement with CS:S only insofar as CS:S follows the same documented algorithm.
+- The physics is checked against theory and against our reading of the public SDK, not against recordings from the
+  CS:S binary. D4 shows that such readings can miss rules.
 - Collision (40 u blocks, no slopes or steps) is simpler than Source BSP collision, and float64 differs from Source's
   float32.
