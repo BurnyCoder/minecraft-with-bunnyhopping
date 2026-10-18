@@ -1,0 +1,18 @@
+/* Global page styles for BhopCraft: a full-window canvas with a DOM HUD overlay on top (see src/ui/hud.ts). */
+html,
+body {
+  margin: 0; /* No default page margin around the canvas. */
+  height: 100%; /* Let #app fill the window. */
+  overflow: hidden; /* No scrollbars: the mouse wheel is the jump bind. */
+  background: #87b5ff; /* Sky colour while the WebGL canvas loads. */
+  font-family: ui-monospace, Consolas, monospace; /* HUD readouts line up in a monospace font. */
+}
+
+#app {
+  position: fixed; /* Pin the game to the viewport. */
+  inset: 0; /* Cover the whole window. */
+}
+
+#app canvas {
+  display: block; /* Remove inline-element baseline gap below the canvas. */
+}
