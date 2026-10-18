@@ -1,0 +1,20 @@
+{
+  // TypeScript settings for the whole repo (browser game, Vite dev-server plugin, Node experiments, Vitest tests).
+  // Modern "bundler" resolution is what Vite recommends: https://vite.dev/guide/features.html#typescript
+  "compilerOptions": {
+    "target": "ES2022", // Emit/check against ES2022 (top-level await, class fields); all evergreen browsers + Node 24 support it.
+    "module": "ESNext", // Keep ES module syntax; Vite/tsx do the bundling and transpiling.
+    "moduleResolution": "bundler", // Resolve imports the way Vite does (package "exports", no file extensions required).
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], // Browser DOM types for the client code plus the ES2022 standard library.
+    "types": ["node", "vite/client"], // Node globals for server/experiments, import.meta.env typing for the client.
+    "strict": true, // Full strict type checking to catch physics/unit mistakes at compile time.
+    "noUnusedLocals": true, // Fail on dead variables so leftovers from refactors do not accumulate.
+    "noUnusedParameters": true, // Same for unused function parameters.
+    "noFallthroughCasesInSwitch": true, // Prevent accidental switch fallthrough.
+    "isolatedModules": true, // Required by Vite/esbuild-style per-file transpilation.
+    "verbatimModuleSyntax": true, // Force `import type` for type-only imports so transpilers can drop them safely.
+    "skipLibCheck": true, // Do not type-check third-party .d.ts files (faster, avoids upstream type noise).
+    "noEmit": true // tsc is only a type checker here; Vite produces the actual JavaScript.
+  },
+  "include": ["src", "tests", "server", "experiments", "vite.config.ts"] // Every TypeScript source folder in the repo.
+}

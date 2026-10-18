@@ -1,0 +1,20 @@
+# Dependencies installed by npm (recreated with `npm install`).
+node_modules/
+# Production build output from `vite build`.
+dist/
+# Python virtual environment created by uv for the analysis scripts.
+.venv/
+__pycache__/
+# Runtime logs written by the dev-server log plugin and experiments.
+logs/
+# Local configuration: may hold personal settings; the committed template is .env.example.
+.env
+.env.local
+.env.*.local
+# Local Claude Code / editor tooling.
+.claude/
+.vscode/
+.idea/
+# OS clutter.
+.DS_Store
+Thumbs.db
