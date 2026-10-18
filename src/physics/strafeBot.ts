@@ -14,6 +14,29 @@ import { IN_JUMP, horizontalSpeed, type PlayerState, type UserCmd } from './play
 
 const RAD2DEG = 180 / Math.PI; // Radians -> degrees.
 
+/** Wish speed of a full side strafe (CheckParameters clamps the 400 u/s keyboard move to maxspeed). */
+function strafeWishSpeed(cvars: Cvars): number {
+  return Math.min(SIDE_SPEED, cvars.sv_maxspeed); // 250 u/s with the knife.
+}
+
+/**
+ * Effective projected-speed limit L = min(sv_airspeedcap, wishspeed): AirAccelerate caps wishspd at the air speed cap,
+ * which can only lower it (jwchong's L for air movement). With the default cap 30 < 250 this is 30.
+ */
+export function effectiveAirCap(cvars: Cvars): number {
+  return Math.min(cvars.sv_airspeedcap, strafeWishSpeed(cvars)); // u/s.
+}
+
+/**
+ * Closed-form gain in squared horizontal speed per optimally strafed air tick (jwchong eq. 6.6):
+ * g = L^2 if k >= L, else k(2L - k), with k = tau * wishspeed * airaccelerate and L = effectiveAirCap.
+ */
+export function optimalGainPerTick(cvars: Cvars): number {
+  const L = effectiveAirCap(cvars); // 30 u/s normally.
+  const k = cvars.tick_interval * strafeWishSpeed(cvars) * cvars.sv_airaccelerate; // Max speed added per tick.
+  return k >= L ? L * L : k * (2 * L - k); // (u/s)^2 per tick.
+}
+
 /** When the bot presses jump: always (auto-bhop servers), only on ground ticks (perfect timing), or never. */
 export type JumpMode = 'hold' | 'onGround' | 'none';
 
@@ -54,9 +77,8 @@ export class StrafeBot {
   /** View yaw that puts the sidemove wish direction at the optimal angle theta from the velocity. */
   private optimalYaw(state: PlayerState, cvars: Cvars, speed: number): number {
     if (speed < 1e-9) return this.yaw; // No velocity direction yet: keep looking ahead.
-    const wishspeed = Math.min(SIDE_SPEED, cvars.sv_maxspeed); // CheckParameters clamps 400 -> maxspeed.
-    const k = cvars.tick_interval * wishspeed * cvars.sv_airaccelerate; // Max speed added per tick.
-    const L = cvars.sv_airspeedcap; // 30 u/s cap.
+    const k = cvars.tick_interval * strafeWishSpeed(cvars) * cvars.sv_airaccelerate; // Max speed added per tick.
+    const L = effectiveAirCap(cvars); // Projected-speed limit (30 u/s normally).
     const cosTheta = L - k > 0 ? Math.min(1, (L - k) / speed) : 0; // jwchong eq. 6.5 (cases 1 and 2).
     const theta = Math.acos(cosTheta) * RAD2DEG; // Angle between velocity and wishdir, degrees.
     const velAngle = Math.atan2(state.velocity.y, state.velocity.x) * RAD2DEG; // Velocity heading.

@@ -147,10 +147,11 @@ describe('bunnyhopping', () => {
       { dt: 0.01, airaccel: 1000 }, // k = 2500 >= 30: g = L^2.
       { dt: 0.01, airaccel: 1 }, // k = 2.5 < 30: g = k(2L - k).
       { dt: 0.0078125, airaccel: 10 }, // 128 tick, k = 19.53 < 30.
+      { dt: 0.01, airaccel: 1000, cap: 1e9 }, // Cap removed: L becomes min(cap, wishspeed) = 250.
     ];
-    for (const { dt, airaccel } of cases) {
-      const cvars: Cvars = { ...cvarsFromPreset('css_bhop'), tick_interval: dt, sv_airaccelerate: airaccel }; // Case cvars.
-      const L = cvars.sv_airspeedcap; // 30.
+    for (const { dt, airaccel, cap } of cases) {
+      const cvars: Cvars = { ...cvarsFromPreset('css_bhop'), tick_interval: dt, sv_airaccelerate: airaccel, sv_airspeedcap: cap ?? 30, sv_maxvelocity: 1e9 }; // Case cvars (no axis clamp).
+      const L = Math.min(cvars.sv_airspeedcap, 250); // AirAccelerate: wishspd = min(wishspeed, cap).
       const k = airaccel * cvars.sv_maxspeed * dt; // Max speed added per tick by AirAccelerate.
       const gain = k >= L ? L * L : k * (2 * L - k); // Closed-form |v|^2 gain per tick.
       const bot = new StrafeBot({ mode: 'optimal', direction: 1, jumpMode: 'none' }); // Optimal right-strafe, no jumping.

@@ -2,4 +2,10 @@
 name = "bhopcraft-analysis"
 version = "0.1.0"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "linkify-it-py>=2.2.0",
+    "markdown-pdf>=1.13.3",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.4",
+    "scipy>=1.18.1",
+]

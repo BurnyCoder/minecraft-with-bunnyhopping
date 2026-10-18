@@ -9,7 +9,7 @@ import type { Logger } from '../logging/logger'; // Logging.
 import type { Cvars } from '../physics/cvars'; // Tunables.
 import type { TickEvents } from '../physics/movement'; // Per-tick events.
 import { emptyCmd, horizontalSpeed, type PlayerState, type UserCmd } from '../physics/player'; // Commands/state.
-import { StrafeBot } from '../physics/strafeBot'; // Optimal strafer.
+import { optimalGainPerTick, StrafeBot } from '../physics/strafeBot'; // Optimal strafer + closed form.
 import type { BlockInteraction } from './interaction'; // Block edits.
 
 /** Final report of an autoplay run (also logged). */
@@ -101,9 +101,7 @@ export class Autoplay {
 
   /** Build and log the summary. */
   private finish(finalSpeed: number, cvars: Cvars): void {
-    const L = cvars.sv_airspeedcap; // 30.
-    const k = cvars.tick_interval * cvars.sv_maxspeed * cvars.sv_airaccelerate; // Max air accel per tick.
-    const gain = k >= L ? L * L : k * (2 * L - k); // |v|^2 gain per optimal air tick.
+    const gain = optimalGainPerTick(cvars); // |v|^2 gain per optimal air tick.
     const v0 = this.startSpeed ?? 0; // Start speed.
     const valid = cvars.sv_enablebunnyhopping && this.walkTicks === 0 && this.startSpeed !== null; // Prediction preconditions.
     const predicted = valid ? Math.sqrt(v0 * v0 + this.airTicks * gain) : null; // Closed form.

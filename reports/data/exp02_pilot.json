@@ -1,0 +1,340 @@
+{
+ "stage": "pilot",
+ "durationS": 60,
+ "cvars": {
+  "tick_interval": 0.015,
+  "sv_gravity": 800,
+  "sv_accelerate": 5,
+  "sv_airaccelerate": 10,
+  "sv_friction": 4,
+  "sv_stopspeed": 75,
+  "sv_maxspeed": 250,
+  "sv_maxvelocity": 3500,
+  "sv_enablebunnyhopping": true,
+  "sv_autobunnyhopping": false,
+  "sv_airspeedcap": 30
+ },
+ "runs": [
+  {
+   "q": 0.1,
+   "seed": 1000,
+   "landings": 70,
+   "meanRetention": 0.6792217929024009,
+   "meanGroundTicks": 7.714285714285714,
+   "finalSpeed": 311.07471509808795
+  },
+  {
+   "q": 0.1,
+   "seed": 1001,
+   "landings": 66,
+   "meanRetention": 0.596251543553049,
+   "meanGroundTicks": 10.590909090909092,
+   "finalSpeed": 235.53698131960093
+  },
+  {
+   "q": 0.1,
+   "seed": 1002,
+   "landings": 66,
+   "meanRetention": 0.598069125114432,
+   "meanGroundTicks": 10.484848484848484,
+   "finalSpeed": 323.2636387675243
+  },
+  {
+   "q": 0.1,
+   "seed": 1003,
+   "landings": 68,
+   "meanRetention": 0.6483634570441716,
+   "meanGroundTicks": 8.823529411764707,
+   "finalSpeed": 107.5346312274354
+  },
+  {
+   "q": 0.1,
+   "seed": 1004,
+   "landings": 69,
+   "meanRetention": 0.6451048761716756,
+   "meanGroundTicks": 8.579710144927537,
+   "finalSpeed": 367.8749805386986
+  },
+  {
+   "q": 0.1,
+   "seed": 1005,
+   "landings": 67,
+   "meanRetention": 0.6087827017458348,
+   "meanGroundTicks": 10.373134328358208,
+   "finalSpeed": 197.00412890213073
+  },
+  {
+   "q": 0.1,
+   "seed": 1006,
+   "landings": 69,
+   "meanRetention": 0.6663655046707437,
+   "meanGroundTicks": 8.565217391304348,
+   "finalSpeed": 181.59877526480557
+  },
+  {
+   "q": 0.1,
+   "seed": 1007,
+   "landings": 69,
+   "meanRetention": 0.6678258172240901,
+   "meanGroundTicks": 7.956521739130435,
+   "finalSpeed": 315.98080168174306
+  },
+  {
+   "q": 0.1,
+   "seed": 1008,
+   "landings": 70,
+   "meanRetention": 0.6810858494174719,
+   "meanGroundTicks": 7.5,
+   "finalSpeed": 226.0806419629945
+  },
+  {
+   "q": 0.1,
+   "seed": 1009,
+   "landings": 68,
+   "meanRetention": 0.682861877738671,
+   "meanGroundTicks": 9.117647058823529,
+   "finalSpeed": 344.7853610142799
+  },
+  {
+   "q": 0.25,
+   "seed": 1000,
+   "landings": 77,
+   "meanRetention": 0.8616025404480373,
+   "meanGroundTicks": 2.6363636363636362,
+   "finalSpeed": 357.316638116481
+  },
+  {
+   "q": 0.25,
+   "seed": 1001,
+   "landings": 76,
+   "meanRetention": 0.8510880369071869,
+   "meanGroundTicks": 2.8684210526315788,
+   "finalSpeed": 455.212186486196
+  },
+  {
+   "q": 0.25,
+   "seed": 1002,
+   "landings": 75,
+   "meanRetention": 0.82187716764818,
+   "meanGroundTicks": 3.56,
+   "finalSpeed": 456.0533117783641
+  },
+  {
+   "q": 0.25,
+   "seed": 1003,
+   "landings": 76,
+   "meanRetention": 0.8413266716222285,
+   "meanGroundTicks": 3.0657894736842106,
+   "finalSpeed": 356.716333150781
+  },
+  {
+   "q": 0.25,
+   "seed": 1004,
+   "landings": 75,
+   "meanRetention": 0.8172526866850625,
+   "meanGroundTicks": 3.6533333333333333,
+   "finalSpeed": 383.56651922456365
+  },
+  {
+   "q": 0.25,
+   "seed": 1005,
+   "landings": 77,
+   "meanRetention": 0.8613555318152992,
+   "meanGroundTicks": 2.5974025974025974,
+   "finalSpeed": 357.42956109638664
+  },
+  {
+   "q": 0.25,
+   "seed": 1006,
+   "landings": 77,
+   "meanRetention": 0.8617789314347412,
+   "meanGroundTicks": 2.5844155844155843,
+   "finalSpeed": 373.40078599356434
+  },
+  {
+   "q": 0.25,
+   "seed": 1007,
+   "landings": 76,
+   "meanRetention": 0.8284266819101349,
+   "meanGroundTicks": 3.4078947368421053,
+   "finalSpeed": 194.6653480164552
+  },
+  {
+   "q": 0.25,
+   "seed": 1008,
+   "landings": 75,
+   "meanRetention": 0.8280627189261371,
+   "meanGroundTicks": 3.3866666666666667,
+   "finalSpeed": 194.04827637264134
+  },
+  {
+   "q": 0.25,
+   "seed": 1009,
+   "landings": 75,
+   "meanRetention": 0.821529279857995,
+   "meanGroundTicks": 3.5733333333333333,
+   "finalSpeed": 355.209229280853
+  },
+  {
+   "q": 0.5,
+   "seed": 1000,
+   "landings": 78,
+   "meanRetention": 0.8955641731821395,
+   "meanGroundTicks": 1.8846153846153846,
+   "finalSpeed": 450.04375787997617
+  },
+  {
+   "q": 0.5,
+   "seed": 1001,
+   "landings": 78,
+   "meanRetention": 0.9031671949031875,
+   "meanGroundTicks": 1.7179487179487178,
+   "finalSpeed": 453.15580348776797
+  },
+  {
+   "q": 0.5,
+   "seed": 1002,
+   "landings": 78,
+   "meanRetention": 0.8990204183260077,
+   "meanGroundTicks": 1.794871794871795,
+   "finalSpeed": 508.0279666621493
+  },
+  {
+   "q": 0.5,
+   "seed": 1003,
+   "landings": 77,
+   "meanRetention": 0.887752891536815,
+   "meanGroundTicks": 2.051948051948052,
+   "finalSpeed": 443.8949423776033
+  },
+  {
+   "q": 0.5,
+   "seed": 1004,
+   "landings": 77,
+   "meanRetention": 0.8708298587347759,
+   "meanGroundTicks": 2.4025974025974026,
+   "finalSpeed": 362.4486389837759
+  },
+  {
+   "q": 0.5,
+   "seed": 1005,
+   "landings": 78,
+   "meanRetention": 0.9012973240808131,
+   "meanGroundTicks": 1.7820512820512822,
+   "finalSpeed": 448.9078059491154
+  },
+  {
+   "q": 0.5,
+   "seed": 1006,
+   "landings": 77,
+   "meanRetention": 0.8730802388239064,
+   "meanGroundTicks": 2.3376623376623376,
+   "finalSpeed": 414.1950837067514
+  },
+  {
+   "q": 0.5,
+   "seed": 1007,
+   "landings": 78,
+   "meanRetention": 0.8990208637241617,
+   "meanGroundTicks": 1.8076923076923077,
+   "finalSpeed": 590.0748020779332
+  },
+  {
+   "q": 0.5,
+   "seed": 1008,
+   "landings": 77,
+   "meanRetention": 0.8810687200966758,
+   "meanGroundTicks": 2.1948051948051948,
+   "finalSpeed": 342.68306952674834
+  },
+  {
+   "q": 0.5,
+   "seed": 1009,
+   "landings": 78,
+   "meanRetention": 0.8933604541389408,
+   "meanGroundTicks": 1.935897435897436,
+   "finalSpeed": 460.76250623001704
+  },
+  {
+   "q": 0.75,
+   "seed": 1000,
+   "landings": 76,
+   "meanRetention": 0.8311513662380592,
+   "meanGroundTicks": 3.3157894736842106,
+   "finalSpeed": 292.0510338708182
+  },
+  {
+   "q": 0.75,
+   "seed": 1001,
+   "landings": 75,
+   "meanRetention": 0.8148269158088634,
+   "meanGroundTicks": 3.7466666666666666,
+   "finalSpeed": 259.4088230362748
+  },
+  {
+   "q": 0.75,
+   "seed": 1002,
+   "landings": 76,
+   "meanRetention": 0.8299731706665323,
+   "meanGroundTicks": 3.3815789473684212,
+   "finalSpeed": 475.67967453396415
+  },
+  {
+   "q": 0.75,
+   "seed": 1003,
+   "landings": 75,
+   "meanRetention": 0.817606049060194,
+   "meanGroundTicks": 3.7066666666666666,
+   "finalSpeed": 380.61739764184784
+  },
+  {
+   "q": 0.75,
+   "seed": 1004,
+   "landings": 75,
+   "meanRetention": 0.8150341462389872,
+   "meanGroundTicks": 3.6666666666666665,
+   "finalSpeed": 379.6325923696869
+  },
+  {
+   "q": 0.75,
+   "seed": 1005,
+   "landings": 77,
+   "meanRetention": 0.8655371246810888,
+   "meanGroundTicks": 2.5974025974025974,
+   "finalSpeed": 580.1390607697726
+  },
+  {
+   "q": 0.75,
+   "seed": 1006,
+   "landings": 76,
+   "meanRetention": 0.8188161853368408,
+   "meanGroundTicks": 3.486842105263158,
+   "finalSpeed": 330.20174644671323
+  },
+  {
+   "q": 0.75,
+   "seed": 1007,
+   "landings": 75,
+   "meanRetention": 0.7960578663386787,
+   "meanGroundTicks": 4.053333333333334,
+   "finalSpeed": 414.17875254991657
+  },
+  {
+   "q": 0.75,
+   "seed": 1008,
+   "landings": 75,
+   "meanRetention": 0.8210610558764695,
+   "meanGroundTicks": 3.7066666666666666,
+   "finalSpeed": 320.16106257187073
+  },
+  {
+   "q": 0.75,
+   "seed": 1009,
+   "landings": 76,
+   "meanRetention": 0.840496915554107,
+   "meanGroundTicks": 3.0789473684210527,
+   "finalSpeed": 331.3659941394624
+  }
+ ],
+ "autobhopFinalSpeed": 1894.6239732464057
+}
