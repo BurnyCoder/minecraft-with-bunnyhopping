@@ -51,3 +51,90 @@ final speed after 10 s. No hypothesis is pre-specified.
 - Plot the measured per-tick gain normalised by L² against k/L, with the theory curve.
 - Report the intervention outcomes against their predictions.
 - No data are excluded.
+
+---
+
+## Results (run 2026-10-18 16:45–16:47 UTC, after the pre-registration commit `3a69dc7`)
+
+Data: `reports/data/exp01_results.json`. Statistics and figures: `analysis/analyze.py` → `reports/data/results_summary.json`
+and `reports/figures/fig1–fig4`. Logs: `logs/experiments_*.log`, `logs/analysis_*.log`.
+
+### H1: closed-form agreement — **supported**
+- The worst relative error in |v|² over all 16 conditions and all ticks is **9.4 × 10⁻¹⁵**. That is 5 orders of
+  magnitude below the 1e-9 pass threshold and close to float64 rounding (2.2 × 10⁻¹⁶ per operation, accumulated over
+  up to 1280 ticks).
+- No condition had a ground (friction) tick: auto-bhop re-jumped on every landing.
+- A repeat run of the 100 tick / A = 1000 condition gave a bit-identical final speed (981.0708435174295 u/s): the
+  simulation is deterministic.
+
+| tick rate | sv_airaccelerate | k/L | g (u²/s² per tick) | air ticks | final speed (u/s) | predicted (u/s) | max rel. error |
+|---|---|---|---|---|---|---|---|
+| 33.33 | 1 | 0.250 | 393.75 | 333 | 440.021 | 440.021 | 3.7e-15 |
+| 33.33 | 10 / 100 / 1000 | 2.5 / 25 / 250 | 900.00 | 333 | 601.831 | 601.831 | 1.7e-15 |
+| 66.67 | 1 | 0.125 | 210.94 | 667 | 450.772 | 450.772 | 4.4e-15 |
+| 66.67 | 10 / 100 / 1000 | 1.25 / 12.5 / 125 | 900.00 | 667 | 814.125 | 814.125 | 2.1e-15 |
+| 100 | 1 | 0.083 | 143.75 | 1000 | 454.148 | 454.148 | 7.7e-15 |
+| 100 | 10 | 0.833 | 875.00 | 1000 | 968.246 | 968.246 | 5.5e-15 |
+| 100 | 100 / 1000 | 8.33 / 83.3 | 900.00 | 1000 | 981.071 | 981.071 | 2.1e-15 |
+| 128 | 1 | 0.065 | 113.37 | 1280 | 455.650 | 455.650 | 9.4e-15 |
+| 128 | 10 | 0.651 | 790.41 | 1280 | 1036.445 | 1036.445 | 4.9e-15 |
+| 128 | 100 / 1000 | 6.51 / 65.1 | 900.00 | 1280 | 1102.044 | 1102.044 | 2.1e-15 |
+
+Rows with identical outcomes are merged (full table: `reports/data/tables.md`).
+
+**What this means:**
+- Once k ≥ L, air acceleration no longer matters. A = 10, 100 and 1000 give identical speeds at 33–67 tick, because
+  the 30 u/s projected cap, not A, limits each tick.
+- The tick rate then sets the gain per second (900·tickrate u²/s³), so under this model a higher tick rate gives
+  faster bhop: after 10 s of optimal strafing, 981 u/s at 100 tick vs 814 u/s at 66.67 tick.
+- Figure 2 shows the transition at k = L.
+
+### Interventions (H2)
+
+| intervention | pre-registered prediction | measured | verdict |
+|---|---|---|---|
+| (1) no strafing, W only | speed stays 250 (1e-9) | max deviation from 250: **0** | supported |
+| (2) 30 u/s cap removed | each axis hits 3500 within 2 ticks | run 1: speed stayed exactly 250 | **falsified as stated** (see deviation D1) |
+| (3) jump one tick late | ×0.96 per landing; final < perfect | ratio per landing in [0.96 − 3e-16, 0.96 + 2e-16] over 13 landings; final 745.8 vs 981.1 u/s | supported |
+| (4a) clamp: speed at the end of each jump tick ≤ 275 | ≤ 275 | max 276.62 u/s | **falsified as stated** (see deviation D2) |
+| (4b) clamp: run maximum ≤ √(275² + N_max·g) | ≤ 378.319 (N_max = 75) | 378.307 | supported |
+
+Removing friction from landings (perfect vs late jump) and removing strafing (W only) are the two causal
+interventions that switch the speed gain on and off. Each matches its predicted size exactly (Figure 3, left).
+
+### Deviations from the pre-registration (all disclosed)
+- **D1, an instrument error in the prediction and in the bot.** The prediction for (2) and the bot both used L = 1e9.
+  In Source's AirAccelerate, wishspd = min(wishspeed, cap), so the effective limit is L = min(cap, wishspeed) = 250 u/s
+  (jwchong's definition).
+  - With L = 1e9 the bot steered straight along its velocity (θ = 0). The projected room was then
+    250 − 250 = 0, so it gained nothing. That is the run-1 result above, kept in
+    `reports/data/exp01_results_run1_bot_cap_bug.json`.
+  - After fixing `StrafeBot` and `optimalGainPerTick` to use min(cap, wishspeed) (unit test added), the **post-hoc**
+    prediction is |v_n| = 250·√(n+1). It matched exactly: 250, 353.553, 433.013, 500, 559.017, 612.372 u/s, ….
+    The per-axis `sv_maxvelocity` clamp (3500) was first reached at tick 226 (Figure 3, right).
+  - The fix cannot affect the confirmatory grid, because there min(30, 250) = 30. The grid results and the exploratory
+    sweep were byte-identical before and after.
+- **D2, a derivation error in prediction (4a).** CS:S applies the clamp inside CheckJumpButton, before that same
+  tick's AirMove. A tick of optimal strafing then adds √(275² + 30²) − 275 ≈ 1.6 u/s, so the end-of-tick speed is about
+  276.6 u/s. That matches the measured 276.62 u/s (post-hoc explanation).
+- **D3, an arithmetic slip in the pre-registration text.** The k/L range is 0.065–250, not 0.008–250: k = 0.0078125·250·1
+  = 1.95, and k/L = 0.065. The condition grid itself was run exactly as specified.
+
+### Exploratory: human-like constant turn rate (not confirmatory)
+
+| ω (°/s) | 0 | 90 | 180 | 360 | 540 | 720 | 1080 |
+|---|---|---|---|---|---|---|---|
+| A = 10 | 251.8 | 664.5 | 791.1 | 380.9 | 251.9 | 201.4 | 161.9 |
+| A = 100 and A = 1000 (identical) | 251.8 | 664.6 | 896.5 | 857.1 | 632.3 | 477.7 | 318.8 |
+
+Speed after 10 s at 100 tick (u/s):
+- A constant mouse speed has a sweet spot near 180 °/s at this tick rate.
+- Turning too fast drops below the 250 u/s run speed.
+- Higher air acceleration widens the useful range of turn rates.
+- Hypothesis for future work: the optimal ω scales with tick rate and speed. This was not tested.
+
+### Limitations
+- The physics is checked against theory, not against recordings from the real CS:S binary. Agreement with theory
+  implies agreement with CS:S only insofar as CS:S follows the same documented algorithm.
+- Collision (40 u blocks, no slopes or steps) is simpler than Source BSP collision, and float64 differs from Source's
+  float32.
