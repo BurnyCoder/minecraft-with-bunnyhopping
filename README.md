@@ -4,6 +4,24 @@ BhopCraft is a Minecraft-style voxel game that runs in the browser (TypeScript +
 blocks in an endless procedurally generated world, and the player moves with a port of the Counter-Strike: Source
 movement code, so bunnyhopping and air-strafing work the way they do in CS:S.
 
+**Features**
+- **Voxel world:** endless seeded terrain (simplex-noise hills, trees, a flat 24-block spawn plaza for bhopping),
+  chunk streaming, procedurally painted pixel-art textures.
+- **Building:** break and place blocks, 9-block hotbar, edits saved per seed.
+- **CS:S movement:**
+  - Port of Source `FullWalkMove`: friction, accelerate, air strafing with the 30 u/s cap.
+  - Anti-pogo or auto-bhop, the 110% bhop clamp, ducking and crouch-jumps.
+  - Swept voxel collision.
+- **CS:S feel:**
+  - Raw mouse input at CS:S sensitivity scale, Hor+ FOV.
+  - Mouse-wheel jump, a u/s speedometer, a backquote console for live cvars.
+  - Two presets: `css_bhop` and `css_vanilla`.
+- **Verification:**
+  - 70 unit/integration tests.
+  - `?autoplay` bot run that logs measured vs theoretical speed.
+  - Headless-Chrome e2e test in CI.
+  - Pre-registered experiments with a PDF paper ([reports/](reports/experiments_summary.md)).
+
 ## How it works (methodology)
 
 - **Movement is CS:S movement.** [`src/physics/movement.ts`](src/physics/movement.ts) reimplements the algorithms
@@ -22,8 +40,9 @@ movement code, so bunnyhopping and air-strafing work the way they do in CS:S.
 - **Fixed tick.** Physics runs at a fixed tick rate (100 or 66.67 Hz, like Source servers) independent of frame
   rate; the camera is interpolated between ticks.
 - **Verified against theory.** Optimal air-strafing must follow the closed form |v_n|² = |v₀|² + n·g
-  ([J. W. Chong, strafing theory](https://www.jwchong.com/hl/strafing.html)). The unit tests and the in-browser
-  autoplay run check this to ~1e-15 relative error.
+  ([J. W. Chong, strafing theory](https://www.jwchong.com/hl/strafing.html)). The experiments measured a worst
+  relative error of 9.4e-15 across 16 tick-rate × air-acceleration settings (see "Experiments and results").
+  Details of every step, constant and deviation: [docs/movement-physics.md](docs/movement-physics.md).
 
 ### Movement presets
 
@@ -36,7 +55,8 @@ movement code, so bunnyhopping and air-strafing work the way they do in CS:S.
 | `sv_enablebunnyhopping` | 1 (no speed cap) | 0 (jumping clamps speed to 110% of run speed) |
 | `sv_autobunnyhopping` | 1 (hold Space) | 0 (time your jumps; use the mouse wheel) |
 
-`css_bhop` matches Momentum Mod's bhop mode; `css_vanilla` matches stock CS:S servers.
+`css_bhop` follows Momentum Mod's bhop mode. `css_vanilla` follows stock CS:S server defaults as documented
+publicly (Valve Developer Community wiki, Momentum Mod's base mode).
 
 ## Install and run
 
@@ -64,6 +84,7 @@ Open <http://localhost:5173> and click the window to capture the mouse.
 | `npm run typecheck` | TypeScript type check |
 | `npm run e2e -- --seconds 10 --preset css_bhop` | Starts Vite, runs the game in headless Chrome with autoplay, saves screenshots, checks the log |
 | `npm run build` | Type check + static production build into `dist/` |
+| `uv sync` then `npm run experiments` | Re-run both experiments, statistics, figures and `reports/paper.pdf` (deterministic seeds) |
 
 ## Controls
 
@@ -87,14 +108,16 @@ sides each jump. The speedometer shows horizontal speed in u/s (run speed is 250
 
 ## Configuration
 
-All settings are optional `VITE_*` keys in `.env` (template: [.env.example](.env.example)): preset, seed, render
-distance, FOV, mouse sensitivity, log level, and per-cvar overrides such as `VITE_SV_AIRACCELERATE=100`. Invalid values
-fall back to defaults and are logged as warnings. URL parameters override `.env`: `?preset=`, `?seed=`,
-`?rd=` (render distance), `?log=`, and `?autoplay=<seconds>`. During play, the console (`) changes cvars live,
-validated against the same rules.
+- **Where settings live.** Everything is optional:
+  - `VITE_*` keys in `.env` (template: [.env.example](.env.example)).
+  - URL parameters (`?preset=`, `?seed=`, `?rd=`, `?log=`, `?autoplay=<seconds>`).
+  - The in-game console for live changes.
+- **What you can set.** Preset, seed, render distance, FOV, sensitivity, log level, and every movement cvar (e.g.
+  `VITE_SV_AIRACCELERATE=100`).
+- **Invalid values** fall back to defaults with a logged warning.
+- **Saving.** Block edits are saved per seed in `localStorage`.
 
-Block edits are saved per seed in the browser's `localStorage` (key `bhopcraft:edits:<seed>`) and restored on reload;
-`world_reset` in the console clears them.
+Full reference: [docs/configuration.md](docs/configuration.md).
 
 ## What happens when you run it
 
@@ -122,6 +145,69 @@ Block edits are saved per seed in the browser's `localStorage` (key `bhopcraft:e
    - A bot places and breaks a block.
    - It then strafe-jumps optimally for N seconds.
    - It logs `autoplay finished` with measured vs predicted speed.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph startup["src/main.ts phases"]
+    CFG[loadConfig<br/>.env + URL] --> LOG[initLogging] --> REN[createRenderer] --> WLD[createWorld] --> SPN[spawnPlayer] --> HUD[createHud] --> INP[bindInput] --> LOOP[startGameLoop]
+  end
+  subgraph physics["src/physics (DOM-free)"]
+    MOVE[movement.ts<br/>CS:S FullWalkMove] --> COL[collision.ts<br/>swept AABB]
+    BOT[strafeBot.ts]
+    CV[cvars.ts presets]
+  end
+  subgraph world["src/world (DOM-free)"]
+    TER[terrain.ts<br/>simplex fBm] --> WORLD[world.ts<br/>lazy chunks + edits]
+    WORLD --> MESH[mesher.ts]
+    WORLD --> RAY[raycast.ts]
+  end
+  INPUT[game/input.ts<br/>keys, raw mouse, wheel] -->|UserCmd per tick| LOOP
+  AUTO[game/autoplay.ts] -->|UserCmd| LOOP
+  BOT --> AUTO
+  LOOP -->|playerMove| MOVE
+  COL -->|isSolid| WORLD
+  LOOP --> CR[render/chunkRenderer.ts] --> MESH
+  LOOP --> UI[ui/hud.ts]
+  INT[game/interaction.ts<br/>break/place] --> RAY
+  INT --> WORLD
+  WORLD -->|onChunkChanged| CR
+  WORLD -->|edits| PERS[game/persistence.ts<br/>localStorage]
+  LOG -->|POST /__log| PLUG[server/logPlugin.ts] --> FILE[(logs/game_*.log + terminal)]
+  CON[game/console.ts] -->|edit live| CV
+  E2E[scripts/e2e.ts<br/>headless Chrome] -->|?autoplay| LOOP
+  EXP[experiments/*.ts] --> MOVE
+  EXP --> PY[analysis/*.py uv] --> REP[(reports/ + paper.pdf)]
+```
+
+Module responsibilities, data structures and measured performance: [docs/architecture.md](docs/architecture.md).
+
+## Experiments and results
+
+Two experiments were pre-registered (hypotheses and thresholds committed before running) and are documented in
+[reports/](reports/experiments_summary.md), with a paper ([reports/paper.pdf](reports/paper.pdf)).
+- **Exp. 1:**
+  - Optimal strafing matches the closed form to 9.4e-15 in all 16 conditions.
+  - Interventions isolate the mechanism: no strafing → no gain; a one-tick-late jump → ×0.96 speed per landing at
+    100 tick.
+  - Two predictions were falsified as stated and are explained in the report.
+- **Exp. 2:**
+  - A Markov model of Source's anti-pogo rule predicts the speed kept per landing under random scroll-wheel jumping.
+  - All four Bonferroni CIs (200 runs each) contain the prediction.
+  - The best pulse rate keeps 89% per landing at 66.67 tick.
+
+## Project structure
+
+| path | contents |
+|---|---|
+| `src/` | game: `physics/`, `world/`, `render/`, `game/`, `ui/`, `logging/`, `config.ts`, `main.ts` |
+| `server/` | Vite plugin writing browser logs to `logs/` |
+| `tests/` | Vitest unit + integration tests (mirrors `src/`) |
+| `scripts/e2e.ts` | headless-Chrome end-to-end check |
+| `experiments/`, `analysis/` | experiment runners (TypeScript) and statistics/figures/PDF (Python, uv) |
+| `reports/` | experiment reports, data, figures, paper |
+| `docs/` | physics, architecture and configuration references |
 
 ## Technologies
 
