@@ -1,0 +1,63 @@
+# Publish the game as a static site on GitHub Pages (https://burnycoder.github.io/minecraft-with-bunnyhopping/) on every
+# push to main, then play it once in headless Chrome to prove the deployed page works.
+# Based on GitHub's static Pages starter (https://github.com/actions/starter-workflows/blob/main/pages/static.yml) and
+# Vite's Pages guide (https://vite.dev/guide/static-deploy.html#github-pages). vite.config.ts sets base: './', so the
+# bundle's relative asset URLs work under the /minecraft-with-bunnyhopping/ sub-path. No .env exists on the runner, so
+# the build uses the defaults in src/config.ts; visitors change settings with URL parameters or the in-game console.
+# Requires Pages to be enabled with source "GitHub Actions" (repo Settings -> Pages, or the REST API with build_type=workflow).
+name: Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Manual re-deploy from the Actions tab.
+permissions:
+  contents: read # Checkout.
+  pages: write # Create the Pages deployment.
+  id-token: write # OIDC token that deploy-pages uses to prove the artifact came from this workflow.
+concurrency:
+  group: pages # One deployment at a time; queued runs wait instead of cancelling a running deployment.
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7 # Fetch the repository.
+      - uses: actions/setup-node@v7 # Install Node.js with npm caching.
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci # Exact dependency versions from package-lock.json.
+      - run: npm run build # tsc --noEmit + vite build -> dist/.
+      - uses: actions/configure-pages@v6 # Reads the Pages site settings (fails early if Pages is not enabled).
+      - uses: actions/upload-pages-artifact@v5 # Tars dist/ into the "github-pages" artifact.
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages # Environment GitHub creates for Pages; shows the live URL on the run page.
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }} # Handed to the verify job.
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5 # Publishes the artifact and waits until the deployment is live.
+  verify:
+    # Same autoplay checks as the CI e2e job, but against the live URL: the game must start, render, place/break a
+    # block, bunnyhop with zero friction ticks, match the closed-form speed and log no errors.
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run e2e -- --seconds 6 --url "${{ needs.deploy.outputs.page_url }}"
+      - uses: actions/upload-artifact@v7 # Keep logs and screenshots for inspection.
+        if: always()
+        with:
+          name: pages-e2e-logs
+          path: logs/

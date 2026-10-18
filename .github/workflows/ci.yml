@@ -1,4 +1,5 @@
-# Continuous integration: type-check and run the unit tests on every push to main and every pull request.
+# Continuous integration: type-check + production build, unit tests and the e2e check on every push to main and every
+# pull request. Deployment to GitHub Pages is separate (pages.yml, main only).
 # Actions: https://github.com/actions/checkout and https://github.com/actions/setup-node (npm cache via package-lock.json).
 name: CI
 on:
@@ -15,7 +16,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci # Exact dependency versions from package-lock.json.
-      - run: npm run typecheck # tsc --noEmit.
+      - run: npm run build # tsc --noEmit + vite build: the same production bundle the Pages workflow deploys.
       - run: npm test # Vitest unit + integration tests.
   e2e:
     # Full game in headless Chrome (preinstalled on ubuntu runners at /usr/bin/google-chrome) with autoplay;
