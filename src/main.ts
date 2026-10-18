@@ -5,9 +5,11 @@
 // See README.md ("What happens when you run it") for the data flow between these phases.
 import { loadConfig } from './config'; // Phase 1: .env + URL -> GameConfig.
 import { Autoplay } from './game/autoplay'; // Optional scripted verification run.
+import { DevConsole } from './game/console'; // CS:S-style ` console.
 import { bindDomInput, InputState } from './game/input'; // Phase 7: keyboard/mouse.
 import { BlockInteraction } from './game/interaction'; // Break/place.
 import { startGameLoop, type GameContext } from './game/loop'; // Phase 8: frame loop.
+import { browserStore, editsKey } from './game/persistence'; // Saved edits (for world_reset).
 import { respawn, spawnPlayer } from './game/spawn'; // Phase 5: player on the plaza.
 import { createWorld } from './game/worldSetup'; // Phase 4: world, textures, chunk streaming.
 import { createLogger } from './logging/logger'; // Module loggers.
@@ -52,6 +54,14 @@ function main(): void {
       onLockChange: (locked) => hud.setOverlay(!locked && !autoplay?.active), // Overlay while not playing.
     }); // Phase 7.
     hud.setOverlay(!autoplay); // Autoplay needs no click.
+    new DevConsole(container, {
+      cvars: config.cvars, // Live cvars (the loop reads them every tick).
+      input, // Sensitivity.
+      resetWorld: () => {
+        browserStore()?.removeItem(editsKey(config.seed)); // Forget saved edits...
+        location.reload(); // ...and regenerate the pristine world.
+      },
+    }, createLogger('console')); // ` opens it.
     if (import.meta.env.DEV) (window as unknown as { __bhopcraft: GameContext }).__bhopcraft = ctx; // Dev-only hook for scripted visual checks (stripped from production builds).
     startGameLoop(ctx); // Phase 8.
   } catch (error) {

@@ -37,7 +37,7 @@ const HELP = [
   'Click to play',
   'WASD move · Space hold-jump · Mouse wheel = jump (CS:S style) · Ctrl/C duck',
   'Strafe-jump: hold A (or D) and turn the mouse the same way while in the air',
-  'LMB break · RMB place · 1-9 select block · R respawn · F fullscreen · Esc release mouse',
+  'LMB break · RMB place · 1-9 select block · R respawn · F fullscreen · ` console · Esc release mouse',
 ];
 
 /** The HUD: build once, then call frame() each animation frame. */
