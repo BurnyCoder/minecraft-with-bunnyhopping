@@ -52,6 +52,15 @@ describe('ducking', () => {
     expect(apex(true) - apex(false)).toBeCloseTo(17, 0); // CS:S crouch-jump bonus (62 - 45 = 17 u).
   });
 
+  it('reports a landing when releasing duck in the air puts the feet on the floor', () => {
+    const cvars = cvarsFromPreset('css_vanilla'); // Vanilla.
+    const player = createPlayerState(new Vector3(0, 0, 18)); // Ducked, 18 u above the floor (unduck lowers the feet 17 u).
+    player.ducked = true;
+    const events = playerMove(new TestWorld(), player, emptyCmd(), cvars); // Release duck.
+    expect(player.onGround).toBe(true); // Feet now within 2 u of the floor.
+    expect(events.landed).toBe(true); // Reported as a landing.
+  });
+
   it('stays ducked in the air when the standing hull would not fit, then stands up after landing', () => {
     const cvars = cvarsFromPreset('css_vanilla'); // Vanilla.
     const player = createPlayerState(new Vector3(0, 0, 10)); // Ducked, 10 u above the floor.

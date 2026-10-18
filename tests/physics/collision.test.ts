@@ -6,7 +6,9 @@ import { Vector3 } from 'three'; // Vector math.
 import { describe, expect, it } from 'vitest'; // Vitest API.
 import { hullOverlapsSolid, traceHull, tryPlayerMove } from '../../src/physics/collision'; // Units under test.
 import { DIST_EPSILON, STAND_HULL } from '../../src/physics/constants'; // Hull + surface gap.
-import { createPlayerState } from '../../src/physics/player'; // Player factory.
+import { cvarsFromPreset } from '../../src/physics/cvars'; // Presets (ledge test).
+import { playerMove } from '../../src/physics/movement'; // Full tick (ledge test).
+import { createPlayerState, emptyCmd } from '../../src/physics/player'; // Player factory + neutral command.
 import { TestWorld } from '../helpers/worlds'; // Exact test geometry.
 
 describe('traceHull', () => {
@@ -68,6 +70,39 @@ describe('tryPlayerMove', () => {
     tryPlayerMove(world, player, STAND_HULL, 0.1); // Would rise 50 u.
     expect(player.origin.z).toBeCloseTo(80 - 62 - DIST_EPSILON, 9); // Head just under the ceiling.
     expect(player.velocity.z).toBe(0); // Upward speed removed.
+  });
+
+  it('stops at an outside corner when moving diagonally into it, without entering the block', () => {
+    const world = new TestWorld().add(2, 2, 0).add(2, 2, 1); // Single pillar spanning x, y in [80, 120].
+    const player = createPlayerState(new Vector3(40, 40, DIST_EPSILON)); // Hull x, y in [24, 56], diagonal to the pillar.
+    player.velocity.set(1000, 1000, 0); // Straight at the corner.
+    tryPlayerMove(world, player, STAND_HULL, 0.1); // Would move 100 u on each axis.
+    expect(hullOverlapsSolid(world, player.origin, STAND_HULL)).toBe(false); // Never inside the pillar.
+    expect(player.velocity.x === 0 || player.velocity.y === 0).toBe(true); // One axis was clipped by a face.
+  });
+
+  it('collides correctly at negative coordinates', () => {
+    const world = new TestWorld().add(-3, -1, 0).add(-3, -1, 1); // Wall block spanning x in [-120, -80].
+    const player = createPlayerState(new Vector3(-20, -20, DIST_EPSILON)); // Hull x in [-36, -4].
+    player.velocity.set(-1000, 0, 0); // Moving towards -x.
+    tryPlayerMove(world, player, STAND_HULL, 0.1); // Would travel 100 u.
+    expect(player.origin.x).toBeCloseTo(-80 + 16 + DIST_EPSILON, 9); // Hull min stops 1/32 u past the face at x = -80.
+    expect(player.velocity.x).toBe(0); // Blocked component removed.
+  });
+
+  it('walks off a ledge taller than the step size and falls instead of snapping down', () => {
+    const world = new TestWorld(); // Floor at z = 0...
+    for (let bx = -2; bx <= 0; bx++) world.add(bx, 0, 0); // ...plus a 1-block (40 u) platform ending at x = 40.
+    const cvars = cvarsFromPreset('css_vanilla'); // Any preset.
+    const player = createPlayerState(new Vector3(20, 20, 40 + DIST_EPSILON)); // Standing on the platform.
+    player.onGround = true;
+    let left = false; // Has the player left the ground?
+    for (let tick = 0; tick < 40; tick++) {
+      playerMove(world, player, { ...emptyCmd(), forwardmove: 400 }, cvars); // Walk towards +x.
+      if (!player.onGround) left = true;
+    }
+    expect(left).toBe(true); // Became airborne at the edge (40 u > 18 u StayOnGround reach).
+    expect(player.origin.z).toBeCloseTo(DIST_EPSILON, 6); // Landed on the floor below.
   });
 
   it('runs across a floor made of many blocks without snagging on seams', () => {
