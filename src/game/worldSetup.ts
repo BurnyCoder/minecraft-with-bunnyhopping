@@ -9,6 +9,7 @@ import { BlockHighlight } from '../render/highlight'; // Selection box.
 import { createBlockAtlas } from '../render/textures'; // Procedural textures.
 import { TerrainGenerator } from '../world/terrain'; // Terrain generator.
 import { World } from '../world/world'; // Block store.
+import { attachPersistence, browserStore } from './persistence'; // Saved block edits.
 
 /** Objects created by this phase. */
 export interface WorldSetup {
@@ -21,6 +22,7 @@ export interface WorldSetup {
 /** Create the world and render its spawn area. */
 export function createWorld(config: GameConfig, scene: Scene, log: Logger): WorldSetup {
   const world = new World(new TerrainGenerator(config.seed)); // Seeded, lazily generated.
+  attachPersistence(world, browserStore(), config.seed, log); // Load saved edits before any chunk is generated.
   const atlas = createBlockAtlas(); // Paint textures.
   const chunks = new ChunkRenderer(scene, world, atlas.texture, config.renderDistance, log); // Streamer.
   const t0 = performance.now(); // Timing.
