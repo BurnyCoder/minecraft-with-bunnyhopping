@@ -21,9 +21,9 @@ differs. Verification results are in [reports/](../reports/experiments_summary.m
 | 2 | `duck` | `Duck`/`FinishDuck`/`CanUnduck`/`FinishUnDuck` (L4074–4253) | instant hull switch 62 ↔ 45 u; in the air the feet move ±17 u; unduck only if the standing hull fits |
 | 3 | `startGravity` | `StartGravity` (L1246) | vz −= g·τ/2, then per-axis `checkVelocity` |
 | 4 | `checkJumpButton` | `CheckJumpButton` (L2352) | if grounded and jump not held last tick (or auto-bhop): optional 110% clamp, vz += √(2·800·57), finish gravity |
-| 5 | `friction` | `Friction` (L1610) | ground only: v −= max(v, stopspeed)·friction·τ |
-| 6 | `walkMove` / `airMove` | `WalkMove` (L1893) / `AirMove` (L1751) | `accelerate` or `airAccelerate` (wishspd capped at 30), then `tryPlayerMove`; walk also does `stayOnGround` |
-| 7 | `categorizePosition` | `CategorizePosition` (L3794) | vz > 140 → airborne; else grounded if a block lies within 2 u below (landing zeroes vz) |
+| 5 | `friction` | `Friction` (L1610) | ground only: v −= max(v, stopspeed)·friction·surfaceFriction·τ |
+| 6 | `walkMove` / `airMove` | `WalkMove` (L1893) / `AirMove` (L1751) | `accelerate` or `airAccelerate` (wishspd capped at 30; amount × surfaceFriction), then `tryPlayerMove`; walk also does `stayOnGround` |
+| 7 | `categorizePosition` | `CategorizePosition` (L3794) | surfaceFriction = 1 [L3800]; vz > 140 → airborne; else grounded if a block lies within 2 u below (landing zeroes vz); airborne with vz > 0 → surfaceFriction = 0.25 [L3872–3877] |
 | 8 | `finishGravity` | `FinishGravity` (L1682) | vz −= g·τ/2; if grounded vz = 0 |
 | 9 | — | `FinishMove` (L1197) | oldButtons = buttons (anti-pogo memory) |
 
@@ -63,7 +63,9 @@ Preset values (tick, airaccelerate, …) are in the [README](../README.md#moveme
 - **Instant duck.** Source animates ducking on the ground over time.
 - **No `StepMove`.** Blocks (40 u) are taller than the 18 u step, so stairs-stepping never applies.
   `StayOnGround` is kept.
-- **Not implemented:** water, ladders, base velocity (conveyors), surface friction (fixed at 1).
+- **Not implemented:** water, ladders, base velocity (conveyors), per-material friction (every block surface has
+  friction 1). The 0.25 surface friction while rising slowly in the air *is* implemented; it was found by the code
+  review, see reports/exp01, deviation D4.
 - **float64 arithmetic** instead of Source's float32.
 - **No CS:S jump stamina.** We could not confirm vanilla CS:S stamina from public sources. Momentum Mod applies it only
   in its KZ mode.
@@ -74,8 +76,9 @@ Preset values (tick, airaccelerate, …) are in the [README](../README.md#moveme
 ## Strafe bot (`src/physics/strafeBot.ts`)
 - **Optimal mode:** each tick the bot sets the yaw so that the wish direction makes angle θ with the velocity.
   - cos θ = (L − k)/|v| if L > k, else θ = 90°.
-  - L = min(`sv_airspeedcap`, wishspeed); k = τ·wishspeed·A.
+  - L = min(`sv_airspeedcap`, wishspeed); k = k_e·τ·wishspeed·A, where k_e is the player's current
+    `surfaceFriction`.
   - Formulas from [jwchong.com/hl/strafing.html](https://www.jwchong.com/hl/strafing.html).
-- **`optimalGainPerTick`:** the matching closed form, g = L² if k ≥ L else k(2L − k).
+- **`optimalGainPerTick(cvars, k_e)`:** the matching closed form, g = L² if k ≥ L else k(2L − k).
 - **Fixed-turn mode:** turns at a constant rate instead, like a person moving the mouse.
 - **Shared by:** the tests, `?autoplay`, and the experiments.
