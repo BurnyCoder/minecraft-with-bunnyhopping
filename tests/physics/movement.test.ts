@@ -164,6 +164,41 @@ describe('bunnyhopping', () => {
   });
 });
 
+describe('surface friction in the air (Source CategorizePosition: m_surfaceFriction = 0.25 while rising slowly)', () => {
+  it('quarters air acceleration on the tick after the player was rising at 0 < vz <= 140 u/s, not when falling or rising fast', () => {
+    const cvars = cvarsFromPreset('css_vanilla'); // A = 10, dt = 0.015: k = 37.5 u/s per tick.
+    const gainedFrom = (vz: number): number => {
+      const player = airborne(); // At rest horizontally, far above any floor.
+      player.velocity.z = vz; // Vertical speed under test.
+      playerMove(new TestWorld(false), player, emptyCmd(), cvars); // Tick 1: categorizePosition sets the factor.
+      playerMove(new TestWorld(false), player, cmd({ forwardmove: 400 }), cvars); // Tick 2: hold W from rest.
+      return horizontalSpeed(player); // Speed added by one air-accelerate step.
+    };
+    expect(gainedFrom(100)).toBeCloseTo(37.5 * 0.25, 9); // Rising slowly: k/4 = 9.375 (< 30 cap).
+    expect(gainedFrom(-100)).toBeCloseTo(30, 9); // Falling: full k capped at 30.
+    expect(gainedFrom(400)).toBeCloseTo(30, 9); // Rising fast (> 140): factor stays 1.
+  });
+
+  it('follows the per-tick closed form sum of g(k_e * k) while bunnyhopping on vanilla settings', () => {
+    const cvars = cvarsFromPreset('css_vanilla'); // k = 37.5; k/4 = 9.375 < 30, so the factor matters.
+    const player = grounded(250); // Running speed on the floor.
+    const bot = new StrafeBot({ mode: 'optimal', direction: 1, jumpMode: 'hold' }); // Optimal strafer.
+    const L = 30; // Air speed cap.
+    let expected = 250 * 250; // Independent accumulation of |v|^2.
+    let quartered = 0; // Ticks with k_e = 0.25.
+    const vanillaNoClamp = { ...cvars, sv_enablebunnyhopping: true, sv_autobunnyhopping: true }; // Keep hopping without the 275 clamp.
+    for (let tick = 0; tick < 600; tick++) {
+      const ke = player.surfaceFriction; // Factor this tick's air acceleration will use.
+      if (ke < 1) quartered++;
+      const k = ke * 37.5; // Effective per-tick accel bound.
+      expected += k >= L ? L * L : k * (2 * L - k); // jwchong gain with k_e.
+      playerMove(new TestWorld(), player, bot.nextCmd(player, vanillaNoClamp), vanillaNoClamp); // Simulate.
+    }
+    expect(quartered).toBeGreaterThan(50); // The rising-slowly phase occurred on many ticks.
+    expect(Math.abs(horizontalSpeed(player) ** 2 - expected) / expected).toBeLessThan(1e-9); // Exact agreement.
+  });
+});
+
 describe('speed limits', () => {
   it('clamps speed to 1.1 * maxspeed on jump when sv_enablebunnyhopping is 0', () => {
     const vanilla = cvarsFromPreset('css_vanilla'); // Clamp on.

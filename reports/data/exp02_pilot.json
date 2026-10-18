@@ -19,89 +19,89 @@
    "q": 0.1,
    "seed": 1000,
    "landings": 70,
-   "meanRetention": 0.6792217929024009,
+   "meanRetention": 0.6790375412467063,
    "meanGroundTicks": 7.714285714285714,
-   "finalSpeed": 311.07471509808795
+   "finalSpeed": 289.5513762778918
   },
   {
    "q": 0.1,
    "seed": 1001,
    "landings": 66,
-   "meanRetention": 0.596251543553049,
+   "meanRetention": 0.5955156669383466,
    "meanGroundTicks": 10.590909090909092,
-   "finalSpeed": 235.53698131960093
+   "finalSpeed": 221.251042915312
   },
   {
    "q": 0.1,
    "seed": 1002,
    "landings": 66,
-   "meanRetention": 0.598069125114432,
+   "meanRetention": 0.5969652778805626,
    "meanGroundTicks": 10.484848484848484,
-   "finalSpeed": 323.2636387675243
+   "finalSpeed": 303.369988226641
   },
   {
    "q": 0.1,
    "seed": 1003,
    "landings": 68,
-   "meanRetention": 0.6483634570441716,
+   "meanRetention": 0.6478818748378239,
    "meanGroundTicks": 8.823529411764707,
-   "finalSpeed": 107.5346312274354
+   "finalSpeed": 100.98557514360449
   },
   {
    "q": 0.1,
    "seed": 1004,
    "landings": 69,
-   "meanRetention": 0.6451048761716756,
+   "meanRetention": 0.6446460273213993,
    "meanGroundTicks": 8.579710144927537,
-   "finalSpeed": 367.8749805386986
+   "finalSpeed": 345.2661882340031
   },
   {
    "q": 0.1,
    "seed": 1005,
    "landings": 67,
-   "meanRetention": 0.6087827017458348,
+   "meanRetention": 0.6085799338512234,
    "meanGroundTicks": 10.373134328358208,
-   "finalSpeed": 197.00412890213073
+   "finalSpeed": 186.71063652450243
   },
   {
    "q": 0.1,
    "seed": 1006,
    "landings": 69,
-   "meanRetention": 0.6663655046707437,
+   "meanRetention": 0.6659600073148708,
    "meanGroundTicks": 8.565217391304348,
-   "finalSpeed": 181.59877526480557
+   "finalSpeed": 168.98950807081295
   },
   {
    "q": 0.1,
    "seed": 1007,
    "landings": 69,
-   "meanRetention": 0.6678258172240901,
+   "meanRetention": 0.6676885226165036,
    "meanGroundTicks": 7.956521739130435,
-   "finalSpeed": 315.98080168174306
+   "finalSpeed": 294.04139360645223
   },
   {
    "q": 0.1,
    "seed": 1008,
    "landings": 70,
-   "meanRetention": 0.6810858494174719,
+   "meanRetention": 0.6808962356125603,
    "meanGroundTicks": 7.5,
-   "finalSpeed": 226.0806419629945
+   "finalSpeed": 206.97705274889785
   },
   {
    "q": 0.1,
    "seed": 1009,
    "landings": 68,
-   "meanRetention": 0.682861877738671,
+   "meanRetention": 0.6822208098134367,
    "meanGroundTicks": 9.117647058823529,
-   "finalSpeed": 344.7853610142799
+   "finalSpeed": 321.83079949236793
   },
   {
    "q": 0.25,
    "seed": 1000,
    "landings": 77,
-   "meanRetention": 0.8616025404480373,
+   "meanRetention": 0.8616025404480372,
    "meanGroundTicks": 2.6363636363636362,
-   "finalSpeed": 357.316638116481
+   "finalSpeed": 336.51923724463387
   },
   {
    "q": 0.25,
@@ -109,7 +109,7 @@
    "landings": 76,
    "meanRetention": 0.8510880369071869,
    "meanGroundTicks": 2.8684210526315788,
-   "finalSpeed": 455.212186486196
+   "finalSpeed": 426.67658459762475
   },
   {
    "q": 0.25,
@@ -117,7 +117,7 @@
    "landings": 75,
    "meanRetention": 0.82187716764818,
    "meanGroundTicks": 3.56,
-   "finalSpeed": 456.0533117783641
+   "finalSpeed": 427.9851771953081
   },
   {
    "q": 0.25,
@@ -125,15 +125,15 @@
    "landings": 76,
    "meanRetention": 0.8413266716222285,
    "meanGroundTicks": 3.0657894736842106,
-   "finalSpeed": 356.716333150781
+   "finalSpeed": 332.04637882509894
   },
   {
    "q": 0.25,
    "seed": 1004,
    "landings": 75,
-   "meanRetention": 0.8172526866850625,
+   "meanRetention": 0.8172526866850626,
    "meanGroundTicks": 3.6533333333333333,
-   "finalSpeed": 383.56651922456365
+   "finalSpeed": 358.57646134158756
   },
   {
    "q": 0.25,
@@ -141,15 +141,15 @@
    "landings": 77,
    "meanRetention": 0.8613555318152992,
    "meanGroundTicks": 2.5974025974025974,
-   "finalSpeed": 357.42956109638664
+   "finalSpeed": 337.7627048671412
   },
   {
    "q": 0.25,
    "seed": 1006,
    "landings": 77,
-   "meanRetention": 0.8617789314347412,
+   "meanRetention": 0.8617789314347414,
    "meanGroundTicks": 2.5844155844155843,
-   "finalSpeed": 373.40078599356434
+   "finalSpeed": 352.3764746625687
   },
   {
    "q": 0.25,
@@ -157,15 +157,15 @@
    "landings": 76,
    "meanRetention": 0.8284266819101349,
    "meanGroundTicks": 3.4078947368421053,
-   "finalSpeed": 194.6653480164552
+   "finalSpeed": 183.41190621189037
   },
   {
    "q": 0.25,
    "seed": 1008,
    "landings": 75,
-   "meanRetention": 0.8280627189261371,
+   "meanRetention": 0.8280627189261373,
    "meanGroundTicks": 3.3866666666666667,
-   "finalSpeed": 194.04827637264134
+   "finalSpeed": 182.23016723962147
   },
   {
    "q": 0.25,
@@ -173,7 +173,7 @@
    "landings": 75,
    "meanRetention": 0.821529279857995,
    "meanGroundTicks": 3.5733333333333333,
-   "finalSpeed": 355.209229280853
+   "finalSpeed": 330.68659333659417
   },
   {
    "q": 0.5,
@@ -181,7 +181,7 @@
    "landings": 78,
    "meanRetention": 0.8955641731821395,
    "meanGroundTicks": 1.8846153846153846,
-   "finalSpeed": 450.04375787997617
+   "finalSpeed": 423.6158826160381
   },
   {
    "q": 0.5,
@@ -189,7 +189,7 @@
    "landings": 78,
    "meanRetention": 0.9031671949031875,
    "meanGroundTicks": 1.7179487179487178,
-   "finalSpeed": 453.15580348776797
+   "finalSpeed": 423.0294131571617
   },
   {
    "q": 0.5,
@@ -197,7 +197,7 @@
    "landings": 78,
    "meanRetention": 0.8990204183260077,
    "meanGroundTicks": 1.794871794871795,
-   "finalSpeed": 508.0279666621493
+   "finalSpeed": 474.95254081682066
   },
   {
    "q": 0.5,
@@ -205,23 +205,23 @@
    "landings": 77,
    "meanRetention": 0.887752891536815,
    "meanGroundTicks": 2.051948051948052,
-   "finalSpeed": 443.8949423776033
+   "finalSpeed": 416.91061285134987
   },
   {
    "q": 0.5,
    "seed": 1004,
    "landings": 77,
-   "meanRetention": 0.8708298587347759,
+   "meanRetention": 0.8708298587347757,
    "meanGroundTicks": 2.4025974025974026,
-   "finalSpeed": 362.4486389837759
+   "finalSpeed": 337.1306567879729
   },
   {
    "q": 0.5,
    "seed": 1005,
    "landings": 78,
-   "meanRetention": 0.9012973240808131,
+   "meanRetention": 0.9012973240808133,
    "meanGroundTicks": 1.7820512820512822,
-   "finalSpeed": 448.9078059491154
+   "finalSpeed": 420.32886909634163
   },
   {
    "q": 0.5,
@@ -229,15 +229,15 @@
    "landings": 77,
    "meanRetention": 0.8730802388239064,
    "meanGroundTicks": 2.3376623376623376,
-   "finalSpeed": 414.1950837067514
+   "finalSpeed": 386.8993117349057
   },
   {
    "q": 0.5,
    "seed": 1007,
    "landings": 78,
-   "meanRetention": 0.8990208637241617,
+   "meanRetention": 0.8990208637241619,
    "meanGroundTicks": 1.8076923076923077,
-   "finalSpeed": 590.0748020779332
+   "finalSpeed": 553.2638538999412
   },
   {
    "q": 0.5,
@@ -245,23 +245,23 @@
    "landings": 77,
    "meanRetention": 0.8810687200966758,
    "meanGroundTicks": 2.1948051948051948,
-   "finalSpeed": 342.68306952674834
+   "finalSpeed": 320.37083808535334
   },
   {
    "q": 0.5,
    "seed": 1009,
    "landings": 78,
-   "meanRetention": 0.8933604541389408,
+   "meanRetention": 0.893360454138941,
    "meanGroundTicks": 1.935897435897436,
-   "finalSpeed": 460.76250623001704
+   "finalSpeed": 434.0655702852486
   },
   {
    "q": 0.75,
    "seed": 1000,
    "landings": 76,
-   "meanRetention": 0.8311513662380592,
+   "meanRetention": 0.8311513662380591,
    "meanGroundTicks": 3.3157894736842106,
-   "finalSpeed": 292.0510338708182
+   "finalSpeed": 276.23569643027287
   },
   {
    "q": 0.75,
@@ -269,7 +269,7 @@
    "landings": 75,
    "meanRetention": 0.8148269158088634,
    "meanGroundTicks": 3.7466666666666666,
-   "finalSpeed": 259.4088230362748
+   "finalSpeed": 239.65440260967088
   },
   {
    "q": 0.75,
@@ -277,23 +277,23 @@
    "landings": 76,
    "meanRetention": 0.8299731706665323,
    "meanGroundTicks": 3.3815789473684212,
-   "finalSpeed": 475.67967453396415
+   "finalSpeed": 447.87768427079607
   },
   {
    "q": 0.75,
    "seed": 1003,
    "landings": 75,
-   "meanRetention": 0.817606049060194,
+   "meanRetention": 0.8176060490601941,
    "meanGroundTicks": 3.7066666666666666,
-   "finalSpeed": 380.61739764184784
+   "finalSpeed": 354.8584209755399
   },
   {
    "q": 0.75,
    "seed": 1004,
    "landings": 75,
-   "meanRetention": 0.8150341462389872,
+   "meanRetention": 0.8150341462389873,
    "meanGroundTicks": 3.6666666666666665,
-   "finalSpeed": 379.6325923696869
+   "finalSpeed": 355.0678176638162
   },
   {
    "q": 0.75,
@@ -301,31 +301,31 @@
    "landings": 77,
    "meanRetention": 0.8655371246810888,
    "meanGroundTicks": 2.5974025974025974,
-   "finalSpeed": 580.1390607697726
+   "finalSpeed": 545.9896379359916
   },
   {
    "q": 0.75,
    "seed": 1006,
    "landings": 76,
-   "meanRetention": 0.8188161853368408,
+   "meanRetention": 0.8188161853368405,
    "meanGroundTicks": 3.486842105263158,
-   "finalSpeed": 330.20174644671323
+   "finalSpeed": 310.76887233118293
   },
   {
    "q": 0.75,
    "seed": 1007,
    "landings": 75,
-   "meanRetention": 0.7960578663386787,
+   "meanRetention": 0.7960578663386786,
    "meanGroundTicks": 4.053333333333334,
-   "finalSpeed": 414.17875254991657
+   "finalSpeed": 390.42529044007085
   },
   {
    "q": 0.75,
    "seed": 1008,
    "landings": 75,
-   "meanRetention": 0.8210610558764695,
+   "meanRetention": 0.8210310177106234,
    "meanGroundTicks": 3.7066666666666666,
-   "finalSpeed": 320.16106257187073
+   "finalSpeed": 297.8314151273257
   },
   {
    "q": 0.75,
@@ -333,8 +333,8 @@
    "landings": 76,
    "meanRetention": 0.840496915554107,
    "meanGroundTicks": 3.0789473684210527,
-   "finalSpeed": 331.3659941394624
+   "finalSpeed": 307.56629883996754
   }
  ],
- "autobhopFinalSpeed": 1894.6239732464057
+ "autobhopFinalSpeed": 1782.1673076622135
 }

@@ -41,6 +41,12 @@ User-facing docs are in README.md and docs/. This file covers working rules and 
 - **Dev-only hook:** `window.__bhopcraft` (dev builds only) exposes the `GameContext` for scripted visual checks
   (aim the camera, place blocks).
 - **Strafe theory's L** is min(`sv_airspeedcap`, wishspeed), not the cap alone (see reports/exp01, deviation D1).
+- **Rising slowly quarters acceleration.** Source quarters acceleration (`m_surfaceFriction` = 0.25) on the tick after
+  the player was airborne and rising at 0 < vz ≤ 140. The first port missed it, and the closed-form oracle shared the
+  omission (D4). When porting, diff against the SDK source line by line; do not rely only on tests derived from your
+  own understanding.
+- **Bash heredocs** containing some characters failed to parse in this Windows Git Bash setup. Write helper scripts
+  with the Write tool instead.
 - **Python on Windows** writes CRLF; `.gitattributes` normalises to LF. Prefer the Edit tool for TypeScript changes.
 - **TypeScript 7 + `verbatimModuleSyntax`:** use `import type` for type-only imports. Use a plain `enum` (not
   `const enum`) for cross-file enums.

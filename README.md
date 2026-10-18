@@ -17,7 +17,7 @@ movement code, so bunnyhopping and air-strafing work the way they do in CS:S.
   - Mouse-wheel jump, a u/s speedometer, a backquote console for live cvars.
   - Two presets: `css_bhop` and `css_vanilla`.
 - **Verification:**
-  - 70 unit/integration tests.
+  - 84 unit/integration tests.
   - `?autoplay` bot run that logs measured vs theoretical speed.
   - Headless-Chrome e2e test in CI.
   - Pre-registered experiments with a PDF paper ([reports/](reports/experiments_summary.md)).
@@ -40,8 +40,9 @@ movement code, so bunnyhopping and air-strafing work the way they do in CS:S.
 - **Fixed tick.** Physics runs at a fixed tick rate (100 or 66.67 Hz, like Source servers) independent of frame
   rate; the camera is interpolated between ticks.
 - **Verified against theory.** Optimal air-strafing must follow the closed form |v_n|² = |v₀|² + n·g
-  ([J. W. Chong, strafing theory](https://www.jwchong.com/hl/strafing.html)). The experiments measured a worst
-  relative error of 9.4e-15 across 16 tick-rate × air-acceleration settings (see "Experiments and results").
+  ([J. W. Chong, strafing theory](https://www.jwchong.com/hl/strafing.html)), summed tick by tick with Source's
+  surface-friction factor. The experiments measured a worst relative error of 1.0e-14 across 16 tick-rate ×
+  air-acceleration settings (see "Experiments and results").
   Details of every step, constant and deviation: [docs/movement-physics.md](docs/movement-physics.md).
 
 ### Movement presets
@@ -188,7 +189,9 @@ Module responsibilities, data structures and measured performance: [docs/archite
 Two experiments were pre-registered (hypotheses and thresholds committed before running) and are documented in
 [reports/](reports/experiments_summary.md), with a paper ([reports/paper.pdf](reports/paper.pdf)).
 - **Exp. 1:**
-  - Optimal strafing matches the closed form to 9.4e-15 in all 16 conditions.
+  - Optimal strafing matches the closed form to 1.0e-14 in all 16 conditions.
+  - A code review found that the first port left out Source's 0.25 air surface-friction rule. Our oracle had the same
+    omission, so the tests could not catch it; it is now fixed, and both runs are reported.
   - Interventions isolate the mechanism: no strafing → no gain; a one-tick-late jump → ×0.96 speed per landing at
     100 tick.
   - Two predictions were falsified as stated and are explained in the report.

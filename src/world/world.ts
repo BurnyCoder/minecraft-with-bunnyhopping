@@ -2,7 +2,8 @@
 // Global context: implements physics' VoxelQuery (isSolid) for collision, and serves mesher.ts, raycast.ts and block
 // interaction. Any chunk touched for the first time is generated synchronously (one chunk is ~16k bytes and takes about
 // a millisecond), so a fast bunnyhopper can never fall into an unloaded hole. Player edits are kept in a separate map
-// so unloaded chunks regenerate with them, and so they can be saved (localStorage, a later step).
+// so unloaded chunks regenerate with them and can be saved (game/persistence.ts). Edits are indexed per chunk, so
+// generating a chunk only touches that chunk's edits (a flat list made generation O(total edits) per chunk).
 import type { VoxelQuery } from '../physics/collision'; // Interface used by the movement code.
 import { BLOCKS, BlockId } from './blocks'; // Block table.
 import { CHUNK_HEIGHT, CHUNK_SIZE, CHUNK_VOLUME, chunkCoord, chunkKey, localCoord, localIndex, type Chunk } from './chunk'; // Layout.
@@ -15,15 +16,10 @@ export interface ChunkGenerator {
 /** Callback fired when a chunk's contents (and so its mesh) changed. */
 export type ChunkListener = (cx: number, cy: number) => void;
 
-/** Key of a block edit. */
-function blockKey(bx: number, by: number, bz: number): string {
-  return `${bx},${by},${bz}`; // Unique for integers.
-}
-
 /** Lazily generated chunk world. */
 export class World implements VoxelQuery {
   private readonly chunks = new Map<string, Chunk>(); // Loaded chunks.
-  private readonly edits = new Map<string, BlockId>(); // Player changes, re-applied on (re)generation.
+  private readonly edits = new Map<string, Map<number, BlockId>>(); // chunkKey -> (local index -> id), re-applied on (re)generation.
   private readonly listeners: ChunkListener[] = []; // Mesh-invalidation subscribers.
 
   constructor(private readonly generator: ChunkGenerator) {}
@@ -41,13 +37,18 @@ export class World implements VoxelQuery {
     return chunk;
   }
 
-  /** Re-apply stored edits that fall inside `chunk`. */
+  /** Re-apply the stored edits of `chunk` (only this chunk's map is visited). */
   private applyEdits(chunk: Chunk): void {
-    if (this.edits.size === 0) return; // Fast path.
-    for (const [key, id] of this.edits) {
-      const [bx, by, bz] = key.split(',').map(Number); // Decode key.
-      if (chunkCoord(bx) === chunk.cx && chunkCoord(by) === chunk.cy) chunk.blocks[localIndex(localCoord(bx), localCoord(by), bz)] = id; // Inside: apply.
-    }
+    const own = this.edits.get(chunkKey(chunk.cx, chunk.cy)); // This chunk's edits, if any.
+    if (own) for (const [index, id] of own) chunk.blocks[index] = id; // Local index -> block id.
+  }
+
+  /** Remember an edit in the per-chunk index. */
+  private recordEdit(bx: number, by: number, bz: number, id: BlockId): void {
+    const key = chunkKey(chunkCoord(bx), chunkCoord(by)); // Owning chunk.
+    let own = this.edits.get(key); // Its edit map.
+    if (own === undefined) this.edits.set(key, (own = new Map())); // First edit in this chunk.
+    own.set(localIndex(localCoord(bx), localCoord(by), bz), id); // Latest edit wins.
   }
 
   /** True if chunk (cx, cy) is currently in memory. */
@@ -86,7 +87,7 @@ export class World implements VoxelQuery {
     const lx = localCoord(bx); // Local x.
     const ly = localCoord(by); // Local y.
     this.getChunk(cx, cy).blocks[localIndex(lx, ly, bz)] = id; // Write.
-    this.edits.set(blockKey(bx, by, bz), id); // Remember for regeneration / saving.
+    this.recordEdit(bx, by, bz, id); // Remember for regeneration / saving.
     this.notify(cx, cy); // Own chunk mesh changed.
     if (lx === 0) this.notify(cx - 1, cy); // Faces shared with the -x neighbour.
     if (lx === CHUNK_SIZE - 1) this.notify(cx + 1, cy); // +x neighbour.
@@ -111,13 +112,23 @@ export class World implements VoxelQuery {
     return 0; // Empty column: stand on the bedrock underworld.
   }
 
-  /** All edits as [x, y, z, id] tuples (for persistence). */
+  /** All edits as global [x, y, z, id] tuples (for persistence). */
   exportEdits(): [number, number, number, BlockId][] {
-    return [...this.edits].map(([key, id]) => [...(key.split(',').map(Number) as [number, number, number]), id]); // Decode.
+    const out: [number, number, number, BlockId][] = []; // Flat list.
+    for (const [key, own] of this.edits) {
+      const [cx, cy] = key.split(',').map(Number); // Chunk coordinates.
+      for (const [index, id] of own) {
+        const x = index % CHUNK_SIZE; // Invert localIndex: x fastest...
+        const y = Math.floor(index / CHUNK_SIZE) % CHUNK_SIZE; // ...then y...
+        const z = Math.floor(index / (CHUNK_SIZE * CHUNK_SIZE)); // ...then z.
+        out.push([cx * CHUNK_SIZE + x, cy * CHUNK_SIZE + y, z, id]); // Global coordinates.
+      }
+    }
+    return out;
   }
 
   /** Load edits (before chunks are generated, e.g. at startup). */
   importEdits(edits: readonly [number, number, number, BlockId][]): void {
-    for (const [bx, by, bz, id] of edits) this.edits.set(blockKey(bx, by, bz), id); // Store; applied on generation.
+    for (const [bx, by, bz, id] of edits) this.recordEdit(bx, by, bz, id); // Applied when each chunk generates.
   }
 }

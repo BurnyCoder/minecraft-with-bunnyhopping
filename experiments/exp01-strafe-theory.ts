@@ -18,24 +18,37 @@ function cvarsFor(tau: number, airaccel: number, extra: Partial<Cvars> = {}): Cv
   return { ...cvarsFromPreset('css_bhop'), tick_interval: tau, sv_airaccelerate: airaccel, ...extra }; // Override.
 }
 
-/** One optimal-strafe run; returns the speed trace (every tick) and the max relative error vs the closed form. */
-function optimalRun(cvars: Cvars): { trace: number[]; maxRelError: number; airTicks: number; groundTicks: number } {
+/**
+ * One optimal-strafe run; returns the speed trace, the closed-form trace and the max relative error between them.
+ * The closed form is summed tick by tick with that tick's Source surface-friction factor k_e (1, or 0.25 after a tick
+ * spent rising slowly in the air), i.e. |v_n|^2 = |v_0|^2 + sum g(k_e,i * k) (jwchong eq. 6.6 with k = k_e tau M A).
+ */
+function optimalRun(cvars: Cvars): { trace: number[]; predictedTrace: number[]; maxRelError: number; airTicks: number; groundTicks: number; quarteredTicks: number } {
   const player = groundedPlayer(V0); // Start state.
   const bot = new StrafeBot({ mode: 'optimal', direction: 1, jumpMode: 'hold' }); // Optimal right strafe.
-  const g = optimalGainPerTick(cvars); // Predicted gain per tick.
-  const trace: number[] = [V0]; // Speed per tick (index = tick).
+  const trace: number[] = [V0]; // Measured speed per tick (index = tick).
+  const predictedTrace: number[] = [V0]; // Closed-form speed per tick.
+  let predictedSq = V0 * V0; // Closed-form |v|^2.
+  let ke = 1; // Surface-friction factor the current tick uses.
   let maxRelError = 0; // Worst deviation.
   let airTicks = 0; // AirMove ticks.
   let groundTicks = 0; // WalkMove ticks (should be 0).
+  let quarteredTicks = 0; // Air ticks with k_e = 0.25.
   const ticks = Math.round(DURATION_S / cvars.tick_interval); // Ticks in the run.
-  simulate(FLAT_FLOOR, player, cvars, ticks, (p) => bot.nextCmd(p, cvars), (r) => {
-    if (r.events.jumped || !r.wasOnGround) airTicks++; // Air tick.
-    else groundTicks++; // Friction tick.
-    const predicted = V0 * V0 + airTicks * g; // Closed form after airTicks air ticks.
-    maxRelError = Math.max(maxRelError, Math.abs(r.speedAfter ** 2 - predicted) / predicted); // Relative error in |v|^2.
+  simulate(FLAT_FLOOR, player, cvars, ticks, (p) => {
+    ke = p.surfaceFriction; // Set by the previous tick's categorizePosition.
+    return bot.nextCmd(p, cvars);
+  }, (r) => {
+    if (r.events.jumped || !r.wasOnGround) {
+      airTicks++; // Air tick: closed-form step with this tick's k_e.
+      if (ke < 1) quarteredTicks++;
+      predictedSq += optimalGainPerTick(cvars, ke);
+    } else groundTicks++; // Friction tick (none expected with auto-bhop).
+    maxRelError = Math.max(maxRelError, Math.abs(r.speedAfter ** 2 - predictedSq) / predictedSq); // Relative error in |v|^2.
     trace.push(r.speedAfter); // Record.
+    predictedTrace.push(Math.sqrt(predictedSq));
   });
-  return { trace, maxRelError, airTicks, groundTicks };
+  return { trace, predictedTrace, maxRelError, airTicks, groundTicks, quarteredTicks };
 }
 
 /** Run every part of Experiment 1 and write the data files. */
@@ -47,8 +60,9 @@ export function runExp01(log: Logger): void {
       const cvars = cvarsFor(tau, A); // Condition cvars.
       const run = optimalRun(cvars); // Simulate.
       const k = tau * 250 * A; // Per-tick accel bound.
-      const row = { tau, tickRate: 1 / tau, airaccel: A, kOverL: k / 30, gainPerTick: optimalGainPerTick(cvars), airTicks: run.airTicks, groundTicks: run.groundTicks, finalSpeed: run.trace.at(-1)!, maxRelError: run.maxRelError };
-      grid.push({ ...row, trace: run.trace.filter((_, i) => i % Math.round(0.1 / tau) === 0) }); // Trace sampled every ~0.1 s for figures.
+      const row = { tau, tickRate: 1 / tau, airaccel: A, kOverL: k / 30, gainPerTick: optimalGainPerTick(cvars), gainPerTickQuartered: optimalGainPerTick(cvars, 0.25), airTicks: run.airTicks, groundTicks: run.groundTicks, quarteredTicks: run.quarteredTicks, finalSpeed: run.trace.at(-1)!, predictedFinalSpeed: run.predictedTrace.at(-1)!, maxRelError: run.maxRelError };
+      const every = (_: number, i: number): boolean => i % Math.round(0.1 / tau) === 0; // Sample every ~0.1 s for figures.
+      grid.push({ ...row, trace: run.trace.filter(every), predictedTrace: run.predictedTrace.filter(every) });
       log.info('exp01 grid condition', row); // Full row in the log.
     }
   }

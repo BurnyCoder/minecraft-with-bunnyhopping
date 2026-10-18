@@ -24,11 +24,12 @@ export interface PlayerState {
   onGround: boolean; // Source "ground entity != NULL".
   ducked: boolean; // Fully ducked (uses DUCK_HULL); always false until the duck step is implemented.
   oldButtons: number; // Buttons of the previous tick (Source m_nOldButtons), used for "don't pogo stick".
+  surfaceFriction: number; // Source m_surfaceFriction: 1 normally, 0.25 after a tick spent rising slowly in the air.
 }
 
 /** Fresh player at `origin`, at rest and airborne (categorizePosition decides grounding on the first tick). */
 export function createPlayerState(origin: Vector3): PlayerState {
-  return { origin: origin.clone(), velocity: new Vector3(), onGround: false, ducked: false, oldButtons: 0 }; // Own copies.
+  return { origin: origin.clone(), velocity: new Vector3(), onGround: false, ducked: false, oldButtons: 0, surfaceFriction: 1 }; // Own copies.
 }
 
 /** A neutral command: no movement, no buttons, looking along +x. */

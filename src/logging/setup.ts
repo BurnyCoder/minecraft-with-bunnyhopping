@@ -12,5 +12,7 @@ export function initLogging(config: GameConfig): Logger {
   const log = createLogger('main'); // Logger for lifecycle events.
   log.info('logging initialised', { sessionId, logFile: `logs/game_${sessionId}.log`, level: config.logLevel }); // Where to look.
   for (const warning of config.warnings) log.warn(warning); // Surface rejected .env/URL values.
+  addEventListener('error', (e) => log.error('uncaught error', { message: e.message, stack: (e.error as Error | undefined)?.stack })); // Uncaught exceptions -> log file.
+  addEventListener('unhandledrejection', (e) => log.error('unhandled promise rejection', { reason: String(e.reason), stack: (e.reason as Error | undefined)?.stack })); // Async failures too.
   return log; // Caller keeps using it.
 }

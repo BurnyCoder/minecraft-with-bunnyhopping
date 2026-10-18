@@ -75,9 +75,17 @@ export function attachPersistence(world: World, store: KeyValueStore | null, see
   const edits = loadEdits(store, seed, log); // Previous session's builds.
   world.importEdits(edits); // Applied as chunks generate.
   log.info('saved edits loaded', { count: edits.length, key: editsKey(seed) }); // Startup info.
-  let timer: ReturnType<typeof setTimeout> | undefined; // Debounce timer.
+  let timer: ReturnType<typeof setTimeout> | undefined; // Debounce timer (undefined = nothing pending).
+  const save = (): void => {
+    clearTimeout(timer); // Cancel any pending save...
+    timer = undefined; // ...and mark nothing pending.
+    saveEdits(store, seed, world.exportEdits(), log); // Write now.
+  };
   world.onChunkChanged(() => {
     clearTimeout(timer); // Restart the countdown on every edit...
-    timer = setTimeout(() => saveEdits(store, seed, world.exportEdits(), log), 1000); // ...and save once things settle.
+    timer = setTimeout(save, 1000); // ...and save once things settle.
+  });
+  globalThis.addEventListener?.('pagehide', () => {
+    if (timer !== undefined) save(); // Reload/close within 1 s of an edit: flush instead of losing it.
   });
 }

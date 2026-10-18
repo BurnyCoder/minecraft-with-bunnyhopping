@@ -6,7 +6,7 @@
 // Screenshots land in logs/screenshots/ for visual inspection (terrain, textures, HUD, face winding).
 // APIs: Vite createServer (https://vite.dev/guide/api-javascript.html#createserver) and puppeteer-core driving an
 // installed Chrome/Edge without downloading a browser (https://pptr.dev/guides/installation#installing-puppeteer-core).
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'; // Log polling.
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'; // Log polling.
 import { tmpdir } from 'node:os'; // Throwaway Chrome profile location.
 import { join } from 'node:path'; // Paths.
 import { parseArgs } from 'node:util'; // CLI flags (https://nodejs.org/api/util.html#utilparseargsconfig).
@@ -34,14 +34,11 @@ function findChrome(): string {
   return found;
 }
 
-/** Newest game log created after `since` (ms epoch), or null. */
-function newestLog(since: number): string | null {
-  if (!existsSync(LOGS)) return null; // Plugin not started yet.
-  const files = readdirSync(LOGS)
-    .filter((name) => name.startsWith('game_') && name.endsWith('.log')) // Browser session logs only.
-    .map((name) => join(LOGS, name))
-    .filter((path) => statSync(path).birthtimeMs >= since - 1000); // Created by this run.
-  return files.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0] ?? null; // Most recent.
+/** Log file of the page's own session (id read from its "logging initialised" console line), or null if not known yet. */
+function sessionLog(sessionId: string | null): string | null {
+  if (sessionId === null) return null; // Page has not reported its session yet.
+  const path = join(LOGS, `game_${sessionId}.log`); // Written by server/logPlugin.ts.
+  return existsSync(path) ? path : null; // Not flushed yet.
 }
 
 /** Sleep helper. */
@@ -56,7 +53,6 @@ async function main(): Promise<number> {
   const seconds = Number(values.seconds); // Autoplay duration.
   const shots = join(LOGS, 'screenshots'); // Screenshot folder.
   mkdirSync(shots, { recursive: true }); // Ensure it exists.
-  const started = Date.now(); // To find this run's log file.
   const server = await createServer({ server: { port: PORT, strictPort: true }, logLevel: 'warn' }); // Uses vite.config.ts (log plugin included).
   await server.listen(); // Serve the game.
   const url = `http://localhost:${PORT}/?autoplay=${seconds}&preset=${values.preset}`; // Autoplay page.
@@ -70,11 +66,14 @@ async function main(): Promise<number> {
     args: ['--enable-unsafe-swiftshader'], // Allow software WebGL on GPU-less CI machines.
   });
   const pageErrors: string[] = []; // Uncaught exceptions / console errors in the page.
+  let sessionId: string | null = null; // This page's log session (so another open dev tab's log is never read).
   try {
     const page = await browser.newPage(); // One tab.
     page.on('pageerror', (error) => pageErrors.push(String(error))); // Uncaught exceptions.
     page.on('console', (msg) => {
       if (msg.type() === 'error') pageErrors.push(msg.text()); // console.error output (includes WebGL errors).
+      const match = /"sessionId":"([^"]+)"/.exec(msg.text()); // From the "logging initialised" line.
+      if (match && sessionId === null) sessionId = match[1]; // First one wins.
     });
     await page.goto(url, { waitUntil: 'load' }); // Start the game.
     const deadline = Date.now() + (seconds + 40) * 1000; // Generous timeout (startup + run).
@@ -87,7 +86,7 @@ async function main(): Promise<number> {
         log.info('screenshot saved', { path });
         shotTimes.shift(); // Next one.
       }
-      const file = newestLog(started); // This run's log.
+      const file = sessionLog(sessionId); // This page's log.
       if (file === null) continue; // Not created yet.
       const text = readFileSync(file, 'utf8'); // Whole log.
       const line = text.split('\n').find((l) => l.includes('autoplay finished')); // Summary line.

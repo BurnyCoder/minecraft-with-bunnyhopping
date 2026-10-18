@@ -80,5 +80,5 @@ export const consoleSink: LogSink = (line, record) => {
 
 /** Parse a user-supplied level string, falling back to `fallback` for anything unknown. */
 export function parseLogLevel(value: string | undefined, fallback: LogLevel): LogLevel {
-  return value !== undefined && value in LEVEL_RANK ? (value as LogLevel) : fallback; // Only accept the four known names.
+  return value !== undefined && Object.hasOwn(LEVEL_RANK, value) ? (value as LogLevel) : fallback; // Own keys only ("toString" is not a level).
 }
