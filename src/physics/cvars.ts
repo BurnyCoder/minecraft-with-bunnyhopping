@@ -16,7 +16,7 @@ export interface Cvars {
   sv_stopspeed: number; // Below this speed friction acts as if moving at stopspeed (quick stops).
   sv_maxspeed: number; // Player run speed (CS:S knife: 250 u/s).
   sv_maxvelocity: number; // Per-axis velocity clamp (CheckVelocity).
-  sv_enablebunnyhopping: boolean; // false => jumping clamps speed to 1.1 * maxspeed (CS:S since 2010-08-17).
+  sv_enablebunnyhopping: boolean; // false => clamp speed to 1.1 * maxspeed (cvar added to CS:S 2010-08-17); applied on jump, TF2-style.
   sv_autobunnyhopping: boolean; // true => holding jump re-jumps on landing (CS:S since 2025-02-18).
   sv_airspeedcap: number; // Air speed cap (30 in Source); exposed only so experiments can ablate it.
 }
