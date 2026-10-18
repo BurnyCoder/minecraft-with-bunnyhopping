@@ -17,5 +17,5 @@
     "noEmit": true, // tsc is only a type checker here; Vite produces the actual JavaScript.
     "allowImportingTsExtensions": true // Allow explicit .ts import paths (needed by Vite's native config loader, which does not guess extensions).
   },
-  "include": ["src", "tests", "server", "experiments", "vite.config.ts"] // Every TypeScript source folder in the repo.
+  "include": ["src", "tests", "server", "experiments", "scripts", "vite.config.ts"] // Every TypeScript source folder in the repo.
 }

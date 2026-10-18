@@ -55,6 +55,11 @@ export class World implements VoxelQuery {
     return this.chunks.has(chunkKey(cx, cy)); // Map lookup.
   }
 
+  /** Coordinates of every chunk currently in memory (Map iteration tolerates unloadChunk() during the loop). */
+  *loadedChunks(): IterableIterator<[number, number]> {
+    for (const chunk of this.chunks.values()) yield [chunk.cx, chunk.cy]; // Live view of the map.
+  }
+
   /** Forget chunk (cx, cy) (it regenerates identically, edits included, on next access). */
   unloadChunk(cx: number, cy: number): void {
     this.chunks.delete(chunkKey(cx, cy)); // Free memory.
