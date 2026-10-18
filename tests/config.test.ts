@@ -8,6 +8,7 @@ describe('parseConfig', () => {
   it('returns defaults for an empty environment', () => {
     const config = parseConfig({}, new URLSearchParams()); // Nothing set anywhere.
     expect(config).toMatchObject(DEFAULT_CONFIG); // Every field equals its default.
+    expect(config.cvars.sv_airaccelerate).toBe(1000); // Default preset css_bhop.
     expect(config.warnings).toEqual([]); // Nothing to warn about.
   });
 
@@ -27,6 +28,21 @@ describe('parseConfig', () => {
     const config = parseConfig({ VITE_SEED: '42' }, new URLSearchParams('seed=7&autoplay=20')); // ?seed wins over .env.
     expect(config.seed).toBe(7); // Query override applied.
     expect(config.autoplaySeconds).toBe(20); // Autoplay only comes from the URL.
+  });
+
+  it('resolves movement cvars from the preset and applies VITE_<CVAR> overrides', () => {
+    const config = parseConfig({ VITE_PRESET: 'css_vanilla', VITE_SV_AIRACCELERATE: '100', VITE_SV_AUTOBUNNYHOPPING: '1' }, new URLSearchParams());
+    expect(config.preset).toBe('css_vanilla'); // Preset chosen in .env.
+    expect(config.cvars.tick_interval).toBe(0.015); // Value from the vanilla preset.
+    expect(config.cvars.sv_airaccelerate).toBe(100); // Numeric override.
+    expect(config.cvars.sv_autobunnyhopping).toBe(true); // Boolean override (Source-style 1).
+  });
+
+  it('rejects unknown presets and invalid cvar overrides with warnings', () => {
+    const config = parseConfig({ VITE_PRESET: 'quake3', VITE_SV_GRAVITY: '-5' }, new URLSearchParams());
+    expect(config.preset).toBe(DEFAULT_CONFIG.preset); // Unknown preset -> default.
+    expect(config.cvars.sv_gravity).toBe(800); // Out-of-range override ignored.
+    expect(config.warnings).toHaveLength(2); // One warning each.
   });
 
   it('falls back to defaults with a warning for invalid or out-of-range values', () => {

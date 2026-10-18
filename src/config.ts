@@ -4,10 +4,12 @@
 // no module reads environment variables or the URL on its own.
 // Vite env handling: https://vite.dev/guide/env-and-mode.html (only VITE_-prefixed keys reach client code).
 import { parseLogLevel, type LogLevel } from './logging/logger'; // Shared log-level parsing.
+import { CVAR_SCHEMA, cvarsFromPreset, isPresetName, parseCvarValue, type Cvars, type PresetName } from './physics/cvars'; // Movement tunables.
 
 /** Fully parsed configuration. `warnings` lists every rejected value so main.ts can log them once logging is up. */
 export interface GameConfig {
-  preset: string; // Movement preset name (validated against the preset table in physics/cvars.ts).
+  preset: PresetName; // Movement preset name (css_bhop | css_vanilla).
+  cvars: Cvars; // Movement cvars: the preset plus any VITE_<CVAR_NAME> overrides (e.g. VITE_SV_AIRACCELERATE).
   seed: number; // World generation seed (same seed => same terrain).
   renderDistance: number; // View radius in chunks around the player.
   fovDeg: number; // CS:S-style horizontal FOV at a 4:3 aspect (default 90); widened Hor+ on wider screens.
@@ -18,7 +20,7 @@ export interface GameConfig {
 }
 
 /** Defaults used when a key is missing or invalid (the committed .env.example documents the same values). */
-export const DEFAULT_CONFIG: Omit<GameConfig, 'warnings'> = {
+export const DEFAULT_CONFIG: Omit<GameConfig, 'warnings' | 'cvars'> = {
   preset: 'css_bhop', // Bhop-server style by default (user choice).
   seed: 1337, // Arbitrary fixed seed for a reproducible default world.
   renderDistance: 6, // 13x13 chunks visible; a balance of view distance and meshing cost.
@@ -61,8 +63,12 @@ export function parseConfig(env: EnvSource, query: URLSearchParams): GameConfig 
   const rawLevel = pick(env, 'VITE_LOG_LEVEL', query, 'log'); // Level string, if any.
   const logLevel = parseLogLevel(rawLevel, d.logLevel); // Unknown names -> default.
   if (rawLevel !== undefined && rawLevel !== logLevel) warnings.push(`VITE_LOG_LEVEL=${rawLevel} is unknown; using ${logLevel}`);
+  const rawPreset = pick(env, 'VITE_PRESET', query, 'preset'); // Requested movement preset.
+  const preset = rawPreset !== undefined && isPresetName(rawPreset) ? rawPreset : d.preset; // Only known presets.
+  if (rawPreset !== undefined && rawPreset !== preset) warnings.push(`VITE_PRESET=${rawPreset} is unknown; using ${preset}`);
   return {
-    preset: pick(env, 'VITE_PRESET', query, 'preset') ?? d.preset, // Validated later by the physics preset table.
+    preset, // Validated above.
+    cvars: readCvars(preset, env, warnings), // Preset values + VITE_<CVAR> overrides.
     seed: readNumber(pick(env, 'VITE_SEED', query, 'seed'), 'VITE_SEED', d.seed, { min: -2147483648, max: 2147483647, integer: true }, warnings),
     renderDistance: readNumber(pick(env, 'VITE_RENDER_DISTANCE', query, 'rd'), 'VITE_RENDER_DISTANCE', d.renderDistance, { min: 2, max: 16, integer: true }, warnings),
     fovDeg: readNumber(pick(env, 'VITE_FOV', query), 'VITE_FOV', d.fovDeg, { min: 60, max: 130 }, warnings),
@@ -71,6 +77,20 @@ export function parseConfig(env: EnvSource, query: URLSearchParams): GameConfig 
     autoplaySeconds: readNumber(query.get('autoplay') ?? undefined, 'autoplay', d.autoplaySeconds, { min: 0, max: 3600 }, warnings),
     warnings, // Logged by main.ts after logging is configured.
   };
+}
+
+/** Start from the preset and apply every valid VITE_<CVAR_NAME> override (e.g. VITE_SV_AIRACCELERATE=100). */
+function readCvars(preset: PresetName, env: EnvSource, warnings: string[]): Cvars {
+  const cvars = cvarsFromPreset(preset); // Mutable copy of the preset.
+  for (const name of Object.keys(CVAR_SCHEMA) as (keyof Cvars)[]) {
+    const key = `VITE_${name.toUpperCase()}`; // sv_airaccelerate -> VITE_SV_AIRACCELERATE.
+    const raw = env[key]; // Raw .env value, if any.
+    if (raw === undefined || raw.trim() === '') continue; // Not overridden.
+    const value = parseCvarValue(name, raw); // Typed + range-checked.
+    if (value === undefined) warnings.push(`${key}=${raw} is invalid; keeping ${String(cvars[name])}`); // Reject.
+    else (cvars as unknown as Record<string, number | boolean>)[name] = value; // Accept (types match by schema).
+  }
+  return cvars;
 }
 
 /** Browser entry: read Vite's import.meta.env and the page URL. */
