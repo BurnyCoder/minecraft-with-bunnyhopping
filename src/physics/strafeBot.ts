@@ -27,13 +27,19 @@ export function effectiveAirCap(cvars: Cvars): number {
   return Math.min(cvars.sv_airspeedcap, strafeWishSpeed(cvars)); // u/s.
 }
 
+/** Max speed one air tick can add: k = k_e * tau * wishspeed * airaccelerate (jwchong's k_e tau M A; k_e = m_surfaceFriction). */
+function accelPerTick(cvars: Cvars, surfaceFriction: number): number {
+  return surfaceFriction * cvars.tick_interval * strafeWishSpeed(cvars) * cvars.sv_airaccelerate; // u/s.
+}
+
 /**
  * Closed-form gain in squared horizontal speed per optimally strafed air tick (jwchong eq. 6.6):
- * g = L^2 if k >= L, else k(2L - k), with k = tau * wishspeed * airaccelerate and L = effectiveAirCap.
+ * g = L^2 if k >= L, else k(2L - k), with k from accelPerTick (k_e = Source m_surfaceFriction: 1, or 0.25 after a tick
+ * spent rising slowly) and L = effectiveAirCap.
  */
-export function optimalGainPerTick(cvars: Cvars): number {
+export function optimalGainPerTick(cvars: Cvars, surfaceFriction = 1): number {
   const L = effectiveAirCap(cvars); // 30 u/s normally.
-  const k = cvars.tick_interval * strafeWishSpeed(cvars) * cvars.sv_airaccelerate; // Max speed added per tick.
+  const k = accelPerTick(cvars, surfaceFriction); // Max speed added this tick.
   return k >= L ? L * L : k * (2 * L - k); // (u/s)^2 per tick.
 }
 
@@ -77,7 +83,7 @@ export class StrafeBot {
   /** View yaw that puts the sidemove wish direction at the optimal angle theta from the velocity. */
   private optimalYaw(state: PlayerState, cvars: Cvars, speed: number): number {
     if (speed < 1e-9) return this.yaw; // No velocity direction yet: keep looking ahead.
-    const k = cvars.tick_interval * strafeWishSpeed(cvars) * cvars.sv_airaccelerate; // Max speed added per tick.
+    const k = accelPerTick(cvars, state.surfaceFriction); // Max speed this tick's AirAccelerate can add.
     const L = effectiveAirCap(cvars); // Projected-speed limit (30 u/s normally).
     const cosTheta = L - k > 0 ? Math.min(1, (L - k) / speed) : 0; // jwchong eq. 6.5 (cases 1 and 2).
     const theta = Math.acos(cosTheta) * RAD2DEG; // Angle between velocity and wishdir, degrees.

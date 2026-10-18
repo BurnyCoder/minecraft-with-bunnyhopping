@@ -8,7 +8,8 @@
 // total speed. Turning the wish direction (strafing) therefore keeps adding speed.
 // Line references below ([SDK Lnnnn]) point into src/game/shared/gamemovement.cpp of the 2025 SDK tree.
 // Deliberate deviations (see docs/movement-physics.md): no StepMove (blocks are 40 u > 18 u step), no water/ladders,
-// no base velocity, surface friction fixed at 1, float64 arithmetic.
+// no base velocity, every block surface has friction 1 (Source's 0.25 air rule for m_surfaceFriction IS implemented),
+// float64 arithmetic.
 import { Vector3 } from 'three'; // Vector math.
 import { hullOverlapsSolid, traceHull, tryPlayerMove, type VoxelQuery } from './collision'; // World interaction.
 import {
@@ -26,6 +27,8 @@ import type { Cvars } from './cvars'; // Tunables.
 import { IN_DUCK, IN_JUMP, type PlayerState, type UserCmd } from './player'; // State + input.
 
 const DEG2RAD = Math.PI / 180; // Degrees -> radians.
+/** m_surfaceFriction while airborne and rising at 0 < vz <= 140 u/s [SDK CategorizePosition L3876: m_surfaceFriction = 0.25f]. */
+const RISING_AIR_SURFACE_FRICTION = 0.25;
 /** Height difference between the standing and ducked hulls (62 - 45 = 17 u): how far the feet move on an air duck. */
 const DUCK_DELTA = STAND_HULL.maxs[2] - DUCK_HULL.maxs[2];
 
@@ -89,11 +92,11 @@ function wishFrom(fmove: number, smove: number, yawDeg: number, maxspeed: number
 }
 
 /** Accelerate (ground): add speed along wishdir, but never beyond wishspeed in that direction [SDK L1820-1852]. */
-export function accelerate(velocity: Vector3, wishdir: Vector3, wishspeed: number, accel: number, dt: number): void {
+export function accelerate(velocity: Vector3, wishdir: Vector3, wishspeed: number, accel: number, dt: number, surfaceFriction = 1): void {
   const currentspeed = velocity.dot(wishdir); // Speed already going the wished way.
   const addspeed = wishspeed - currentspeed; // Room left until wishspeed.
   if (addspeed <= 0) return; // Already at/above wishspeed in that direction.
-  const accelspeed = Math.min(accel * dt * wishspeed, addspeed); // accel * frametime * wishspeed * surfaceFriction(=1), capped.
+  const accelspeed = Math.min(accel * dt * wishspeed * surfaceFriction, addspeed); // accel * frametime * wishspeed * m_surfaceFriction [L1841], capped.
   velocity.addScaledVector(wishdir, accelspeed); // Apply.
 }
 
@@ -101,12 +104,12 @@ export function accelerate(velocity: Vector3, wishdir: Vector3, wishspeed: numbe
  * AirAccelerate: like accelerate, but the "room left" uses wishspd capped at the air speed cap (30) while the
  * acceleration amount still uses the full wishspeed [SDK L1705-1746]. This asymmetry is what makes air strafing work.
  */
-export function airAccelerate(velocity: Vector3, wishdir: Vector3, wishspeed: number, accel: number, dt: number, airCap: number): void {
+export function airAccelerate(velocity: Vector3, wishdir: Vector3, wishspeed: number, accel: number, dt: number, airCap: number, surfaceFriction = 1): void {
   const wishspd = Math.min(wishspeed, airCap); // Cap speed (GetAirSpeedCap() = 30).
   const currentspeed = velocity.dot(wishdir); // "Veer" amount: projection of velocity on wishdir.
   const addspeed = wishspd - currentspeed; // Room left under the 30 u/s projected cap.
   if (addspeed <= 0) return; // Nothing to add.
-  const accelspeed = Math.min(accel * wishspeed * dt, addspeed); // Uses the uncapped wishspeed, then capped by addspeed.
+  const accelspeed = Math.min(accel * wishspeed * dt * surfaceFriction, addspeed); // Uncapped wishspeed * m_surfaceFriction [L1734], then capped by addspeed.
   velocity.addScaledVector(wishdir, accelspeed); // Apply.
 }
 
@@ -116,7 +119,7 @@ export function friction(state: PlayerState, cvars: Cvars, dt: number): void {
   if (speed < 0.1) return; // Too slow to matter.
   if (!state.onGround) return; // Air friction is zero in this codebase.
   const control = speed < cvars.sv_stopspeed ? cvars.sv_stopspeed : speed; // Bleed threshold.
-  const drop = control * cvars.sv_friction * dt; // Speed removed this tick (surfaceFriction = 1).
+  const drop = control * cvars.sv_friction * state.surfaceFriction * dt; // friction = sv_friction * m_surfaceFriction [L1634].
   const newspeed = Math.max(speed - drop, 0); // Never reverse direction.
   if (newspeed !== speed) state.velocity.multiplyScalar(newspeed / speed); // Scale velocity.
 }
@@ -172,17 +175,19 @@ function checkJumpButton(state: PlayerState, cvars: Cvars, dt: number): boolean 
 /**
  * CategorizePosition: grounded if a block lies within 2 u below the hull and we are not rising faster than 140 u/s.
  * Landing zeroes vz, as SetGroundEntity does [SDK L3794-3870, L3611-3650]. All voxel floors are flat (normal z = 1 >= 0.7).
+ * Also sets m_surfaceFriction: reset to 1 [L3800], or 0.25 when no ground is found while rising (vz > 0) [L3872-3877], so
+ * the next tick's air acceleration is quartered (matters whenever sv_airaccelerate * wishspeed * tau / 4 < 30).
  */
-function categorizePosition(world: VoxelQuery, state: PlayerState): boolean {
-  const wasOnGround = state.onGround; // To report landings.
+function categorizePosition(world: VoxelQuery, state: PlayerState): void {
+  state.surfaceFriction = 1; // Reset on every recategorisation, as Source does.
   if (state.velocity.z > NON_JUMP_VELOCITY) {
-    state.onGround = false; // "Shooting up really fast. Definitely not on ground."
-    return false;
+    state.onGround = false; // "Shooting up really fast. Definitely not on ground." (factor stays 1)
+    return;
   }
   const trace = traceHull(world, state.origin, hullFor(state), new Vector3(0, 0, -GROUND_CHECK_DISTANCE)); // Probe down 2 u.
   state.onGround = trace.axis === 2; // Hit a floor (only z planes can block a pure -z sweep).
   if (state.onGround) state.velocity.z = 0; // SetGroundEntity: mv->m_vecVelocity.z = 0.
-  return state.onGround && !wasOnGround; // Landed this tick.
+  else if (state.velocity.z > 0) state.surfaceFriction = RISING_AIR_SURFACE_FRICTION; // Rising slowly in the air.
 }
 
 /** StayOnGround: snap down onto a floor within STEP_SIZE after walking [SDK L1857-1888] (voxels need no up-trace). */
@@ -216,7 +221,7 @@ function duck(world: VoxelQuery, state: PlayerState, cmd: UserCmd): void {
 /** WalkMove: ground acceleration then slide-move (Source tries a direct move first; tryPlayerMove covers both) [SDK L1893-2018]. */
 function walkMove(world: VoxelQuery, state: PlayerState, wish: Wish, cvars: Cvars, dt: number): void {
   state.velocity.z = 0; // "Set pmove velocity" [SDK L1958].
-  accelerate(state.velocity, wish.dir, wish.speed, cvars.sv_accelerate, dt); // Ground accel.
+  accelerate(state.velocity, wish.dir, wish.speed, cvars.sv_accelerate, dt, state.surfaceFriction); // Ground accel.
   state.velocity.z = 0; // Accelerate cannot add vertical speed on the ground [SDK L1960].
   if (state.velocity.length() < 1) {
     state.velocity.set(0, 0, 0); // "spd < 1.0f": stop completely [SDK L1967-1973].
@@ -228,7 +233,7 @@ function walkMove(world: VoxelQuery, state: PlayerState, wish: Wish, cvars: Cvar
 
 /** AirMove: air acceleration (with the 30 u/s projected cap) then slide-move [SDK L1751-1797]. */
 function airMove(world: VoxelQuery, state: PlayerState, wish: Wish, cvars: Cvars, dt: number): void {
-  airAccelerate(state.velocity, wish.dir, wish.speed, cvars.sv_airaccelerate, dt, cvars.sv_airspeedcap); // Strafe gain.
+  airAccelerate(state.velocity, wish.dir, wish.speed, cvars.sv_airaccelerate, dt, cvars.sv_airspeedcap, state.surfaceFriction); // Strafe gain.
   tryPlayerMove(world, state, hullFor(state), dt); // Move and collide.
 }
 
@@ -240,6 +245,7 @@ export function playerMove(world: VoxelQuery, state: PlayerState, cmd: UserCmd, 
   const dt = cvars.tick_interval; // Fixed tick length.
   const { fmove, smove } = checkParameters(cmd, cvars, state.ducked); // Clamp the move vector to maxspeed (+ duck crop).
   const events: TickEvents = { jumped: false, landed: false }; // Filled below.
+  const groundedAtStart = state.onGround; // To report landings (including ones caused by unducking).
   duck(world, state, cmd); // Duck() runs before FullWalkMove in PlayerMove [SDK L4570+].
   startGravity(state, cvars, dt); // First half of gravity.
   if (cmd.buttons & IN_JUMP) events.jumped = checkJumpButton(state, cvars, dt); // Jump before friction: the bhop window.
@@ -252,15 +258,16 @@ export function playerMove(world: VoxelQuery, state: PlayerState, cmd: UserCmd, 
   const wish = wishFrom(fmove, smove, cmd.viewYaw, cvars.sv_maxspeed); // Desired direction/speed.
   if (state.onGround) walkMove(world, state, wish, cvars, dt); // Ground branch.
   else airMove(world, state, wish, cvars, dt); // Air branch (includes the jump tick).
-  events.landed = categorizePosition(world, state); // Update grounded flag.
+  categorizePosition(world, state); // Update grounded flag and surface friction.
   checkVelocity(state.velocity, cvars.sv_maxvelocity); // Validate again.
   finishGravity(state, cvars, dt); // Second half of gravity.
   if (state.onGround) state.velocity.z = 0; // "If we are on ground, no downward velocity."
   state.oldButtons = cmd.buttons; // FinishMove: m_nOldButtons = m_nButtons [SDK L1199].
+  events.landed = !groundedAtStart && state.onGround; // Airborne at the start of the tick, grounded at the end.
   return events;
 }
 
-/** True if the player box at its current origin is inside a block (used by spawn/teleport sanity checks). */
+/** True if the player box at its current origin is inside a block (tests assert this never happens). */
 export function isStuck(world: VoxelQuery, state: PlayerState): boolean {
   return hullOverlapsSolid(world, state.origin, hullFor(state)); // Any overlap means stuck.
 }

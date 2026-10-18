@@ -35,6 +35,8 @@ export class Autoplay {
   private bot: StrafeBot | null = null; // Created when strafing starts.
   private startSpeed: number | null = null; // Speed at the first air tick.
   private preSpeed = 0; // Speed before the current tick.
+  private preSurfaceFriction = 1; // m_surfaceFriction the current tick's air acceleration uses.
+  private predictedSq = 0; // Closed-form |v|^2 accumulated tick by tick since strafing started.
   private airTicks = 0; // Air ticks since start.
   private walkTicks = 0; // Ground ticks since start.
   private jumps = 0; // Jumps.
@@ -62,6 +64,7 @@ export class Autoplay {
   /** Command for the next tick (call before playerMove). */
   nextCmd(state: PlayerState, cvars: Cvars): UserCmd {
     this.preSpeed = horizontalSpeed(state); // Speed before this tick's move.
+    this.preSurfaceFriction = state.surfaceFriction; // Factor this tick will use.
     let cmd = emptyCmd(); // Default: stand still, look along +x.
     if (this.elapsed >= 0.3 && !this.edited) this.runEditCheck(state); // Once, after settling.
     else if (this.edited) {
@@ -90,10 +93,15 @@ export class Autoplay {
     this.maxSpeed = Math.max(this.maxSpeed, speed); // Peak.
     const airTick = events.jumped || !wasOnGround; // The tick used AirMove.
     if (this.bot !== null) {
-      if (airTick && this.startSpeed === null) this.startSpeed = this.preSpeed; // First strafing air tick.
+      if (airTick && this.startSpeed === null) {
+        this.startSpeed = this.preSpeed; // First strafing air tick.
+        this.predictedSq = this.preSpeed ** 2; // Closed-form starting point.
+      }
       if (this.startSpeed !== null) {
-        if (airTick) this.airTicks++; // Closed-form step.
-        else this.walkTicks++; // Friction tick: the prediction no longer applies.
+        if (airTick) {
+          this.airTicks++; // Closed-form step...
+          this.predictedSq += optimalGainPerTick(cvars, this.preSurfaceFriction); // ...with this tick's k_e.
+        } else this.walkTicks++; // Friction tick: the prediction no longer applies.
       }
     }
     if (this.elapsed >= this.seconds) this.finish(speed, cvars); // Time is up.
@@ -101,10 +109,9 @@ export class Autoplay {
 
   /** Build and log the summary. */
   private finish(finalSpeed: number, cvars: Cvars): void {
-    const gain = optimalGainPerTick(cvars); // |v|^2 gain per optimal air tick.
     const v0 = this.startSpeed ?? 0; // Start speed.
     const valid = cvars.sv_enablebunnyhopping && this.walkTicks === 0 && this.startSpeed !== null; // Prediction preconditions.
-    const predicted = valid ? Math.sqrt(v0 * v0 + this.airTicks * gain) : null; // Closed form.
+    const predicted = valid ? Math.sqrt(this.predictedSq) : null; // Closed form summed per tick.
     this.summary = {
       seconds: Number(this.elapsed.toFixed(4)),
       editCheck: this.editCheck,
