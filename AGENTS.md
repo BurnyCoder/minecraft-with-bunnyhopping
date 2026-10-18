@@ -16,7 +16,7 @@ User-facing docs are in README.md and docs/. This file covers working rules and 
 - `npm test` — unit + integration tests (Node).
 - `npm run typecheck` — type check.
 - `npm run e2e -- --seconds 6 [--preset css_vanilla]` — full game in headless Chrome. Screenshots go to
-  `logs/screenshots/`.
+  `logs/screenshots/`. Add `--url <page>` to check a deployed page instead of starting Vite.
 - `npm run experiments` — needs `uv sync` first. Regenerates `reports/data`, figures and `paper.pdf`; results must stay
   byte-identical.
 
@@ -28,7 +28,9 @@ User-facing docs are in README.md and docs/. This file covers working rules and 
 - Tests first (TDD); run `npm test` and `npm run typecheck` before committing; run `npm run e2e` after touching the
   game client.
 - Never commit `.env`, `logs/` or credentials.
-- One feature branch + PR per functional unit; merge with `gh pr merge --merge`. CI runs typecheck, tests and e2e.
+- One feature branch + PR per functional unit; merge with `gh pr merge --merge`. CI runs typecheck + build, tests
+  and e2e. Every push to `main` redeploys GitHub Pages (`pages.yml`) and re-runs the e2e check against the live URL,
+  so merging is publishing.
 
 ## Experiments (scientific hygiene)
 - Write hypotheses, metrics, thresholds and sample sizes into `reports/expNN_*.md` and commit them *before* running.

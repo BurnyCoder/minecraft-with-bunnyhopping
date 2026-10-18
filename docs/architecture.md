@@ -58,6 +58,11 @@ same code that ships in the game.
   - caps bodies at 1 MiB and session files at 50 MiB,
   - replaces terminal control characters,
   - appends to `logs/game_<id>.log` and echoes to the terminal.
+
+  On a static host there is no plugin: GitHub Pages answers the first POST with 405 (Python's `http.server` with
+  501), the sink switches itself off for that page load, and the console is the only log output.
 - **Dev hook:** in dev builds only, `window.__bhopcraft` exposes the `GameContext` for scripted visual checks.
 - **E2E check:** `scripts/e2e.ts` starts Vite, drives headless Chrome with `?autoplay`, saves screenshots to
   `logs/screenshots/`, and treats the page's own session log (id taken from its console) as the oracle.
+  With `--url <page>` it skips Vite and reads the same lines from the browser console; the Pages workflow
+  (`.github/workflows/pages.yml`) runs it this way against the live site after each deploy.
