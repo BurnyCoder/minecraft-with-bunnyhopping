@@ -4,6 +4,8 @@ BhopCraft is a Minecraft-style voxel game that runs in the browser (TypeScript +
 blocks in an endless procedurally generated world, and the player moves with a port of the Counter-Strike: Source
 movement code, so bunnyhopping and air-strafing work the way they do in CS:S.
 
+**Play it:** <https://burnycoder.github.io/minecraft-with-bunnyhopping/> (desktop browser with WebGL, mouse and keyboard).
+
 **Features**
 - **Voxel world:** endless seeded terrain (simplex-noise hills, trees, a flat 24-block spawn plaza for bhopping),
   chunk streaming, procedurally painted pixel-art textures.
@@ -17,9 +19,9 @@ movement code, so bunnyhopping and air-strafing work the way they do in CS:S.
   - Mouse-wheel jump, a u/s speedometer, a backquote console for live cvars.
   - Two presets: `css_bhop` and `css_vanilla`.
 - **Verification:**
-  - 84 unit/integration tests.
+  - 88 unit/integration tests.
   - `?autoplay` bot run that logs measured vs theoretical speed.
-  - Headless-Chrome e2e test in CI.
+  - Headless-Chrome e2e test in CI, repeated against the live GitHub Pages site after every deploy.
   - Pre-registered experiments with a PDF paper ([reports/](reports/experiments_summary.md)).
 
 ## How it works (methodology)
@@ -61,7 +63,12 @@ publicly (Valve Developer Community wiki, Momentum Mod's base mode).
 
 ## Install and run
 
-Requirements: Node.js ≥ 20.19 (tested with 24.13) and npm. For `npm run e2e`: an installed Chrome or Edge (or set
+**No install:** play at <https://burnycoder.github.io/minecraft-with-bunnyhopping/>. URL parameters work there too
+(e.g. `?preset=css_vanilla&seed=7`). Logs go to the browser console only, because a static host has no log endpoint.
+The site is rebuilt and redeployed by [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on every push to
+`main`.
+
+**Local:** requirements: Node.js ≥ 20.19 (tested with 24.13) and npm. For `npm run e2e`: an installed Chrome or Edge (or set
 `CHROME_PATH`). For the analysis/report scripts: [uv](https://docs.astral.sh/uv/).
 
 ```bash
@@ -84,7 +91,8 @@ Open <http://localhost:5173> and click the window to capture the mouse.
 | `npm test` | Unit and integration tests (Vitest, Node) |
 | `npm run typecheck` | TypeScript type check |
 | `npm run e2e -- --seconds 10 --preset css_bhop` | Starts Vite, runs the game in headless Chrome with autoplay, saves screenshots, checks the log |
-| `npm run build` | Type check + static production build into `dist/` |
+| `npm run e2e -- --seconds 6 --url <page>` | Same checks against an already-served page (e.g. the Pages URL), read from the browser console |
+| `npm run build` | Type check + static production build into `dist/` (what GitHub Pages serves) |
 | `uv sync` then `npm run experiments` | Re-run both experiments, statistics, figures and `reports/paper.pdf` (deterministic seeds) |
 
 ## Controls
