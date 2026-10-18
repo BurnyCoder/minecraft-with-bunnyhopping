@@ -10,6 +10,7 @@ export default defineConfig({
   plugins: [logFilePlugin()], // Dev/preview log endpoint.
   server: { port: 5173, strictPort: true }, // Fixed port so the launch config and docs can rely on it.
   preview: { port: 4173, strictPort: true }, // Fixed port for `vite preview`.
+  build: { chunkSizeWarningLimit: 1000 }, // three.js alone is ~700 kB minified; one bundle is fine for a single-page game.
   test: {
     include: ['tests/**/*.test.ts'], // Only our test folder.
     environment: 'node', // Physics/world code is DOM-free, so plain Node is enough (and fast).
